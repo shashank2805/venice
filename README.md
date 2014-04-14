@@ -1,7 +1,7 @@
 Overview
 ====================================================================================================================
 
-<p align="justify">This is a repository for VENICE, a resource provisioning module for virutal data centers. This is an onging research project of the SAVI research group at University of Waterloo.</p>
+<p align="justify">This is a repository for VENICE, a resource provisioning module for virtual data centers. This is an onging research project of the SAVI research group at University of Waterloo.</p>
 
 Team
 ====================================================================================================================
