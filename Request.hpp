@@ -23,9 +23,9 @@
 class Request {
 private:
 	int reqNumber;
-	string name; // VDC identifier in Openstack
+	string name; // VDC identifier in Openstack -- TODO: not used, remove?
 	string userName; // the name given to the vdc by the user
-	int type;
+	int type;  // TODO: not used, remove?
 	int split;
 	time_t arrTime;
 	int topo;

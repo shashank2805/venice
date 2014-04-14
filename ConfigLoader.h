@@ -6,6 +6,6 @@ class ConfigLoader: public DataLoader {
 public:
 	ConfigLoader(void);
 	~ConfigLoader(void);
-	void Load();
+	void Load(Config &config);
 };
 

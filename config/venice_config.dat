@@ -3,5 +3,9 @@ image_id e8cd8309-524e-4b59-82de-34a716f248ee
 topology_file sub/SAVI_WT_EDGE.dat
 vdc_planner_address 127.0.0.1
 portal_address 127.0.0.1
-
+mysql_server_address 127.0.0.1
+mysql_server_port 3306
+mysql_server_user root
+mysql_server_password null
+mysql_database_name vdc_planner
 

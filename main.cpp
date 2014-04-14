@@ -22,6 +22,7 @@ using namespace std;
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <cmath>
 #include "Substrate_network.hpp"
 #include "User.h"
 #include "Request.hpp"
@@ -32,6 +33,17 @@ using namespace std;
 #include "provisioning_module.h"
 #include "ConfigLoader.h"
 #include "Config.h"
+#include "VDCPlannerMysqlConnector.h"
+
+
+/*for debug printing. comment-out the first line to disable the prints*/
+#define DEBUG 1
+#ifdef DEBUG
+#define debug(M, ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#define debug(M, ...)
+#endif
+/*********************************************/
 
 #define PORT 8080
 
@@ -116,6 +128,12 @@ string Config::key_pair="";
 string Config::portal_address="";
 string Config::topology_file="";
 string Config::vdc_planner_address="";
+// database related information
+string Config::mysql_server_address="";
+int Config::mysql_server_port=0;
+string Config::mysql_server_user="";
+string Config::mysql_server_password="";
+string Config::mysql_database_name="";
 
 int main() {
 
@@ -128,7 +146,7 @@ int main() {
 #endif
 
 	char buffer[1000], buffer2[1000], response[1000], response2[3000];
-	int sock_err;
+	int sock_err, ret_val;
 	std::string status;
 	//Socket and serveur context
 	SOCKADDR_IN sin;
@@ -143,7 +161,8 @@ int main() {
 	std::list<User> users;
 	User user;
 	ConfigLoader cLoader;
-	cLoader.Load();
+	Config config;
+	cLoader.Load(config);
 
 	//----------- First we load the substrate network
 	Substrate_network subNetwork(0);
@@ -151,14 +170,120 @@ int main() {
 	nLoader.Load(&subNetwork);
 	//for testing-----------
 
+// TODO Substrate_network
+
 	//-----------now we load the configuration file
-
-
-
-
-
 	//----------- Now we wait for requests
 	if (!error) {
+
+		// Create Database object
+		// NOTE: this information must be changed and code recompiled to reflect the location of the database
+		VDCPlannerMysqlConnector vdc_db(config.mysql_server_address, config.mysql_server_port,
+				config.mysql_server_user, config.mysql_server_password, config.mysql_database_name);
+
+		if(vdc_db.doesDataBaseExist()) { //if DB is pre-existing, use it.
+			debug("%s \n","Database exists.");
+			std::vector<Request*>* db_requests;
+			std::vector<Request*>::iterator itDBRequest;
+			int user_id = 1;
+			debug("%s \n","Beginning to read all requests from Database");
+			db_requests = vdc_db.readAllVDCRequestsClassFromDataBase();
+			debug("%s: %d\n","Successfully read requests from DB:", db_requests->size());
+
+			for (itDBRequest = db_requests->begin(); itDBRequest != db_requests->end(); itDBRequest++) {
+				// debug print
+				debug("%s \n","Found a relevant request:");
+				(*itDBRequest)->DisplayRequest();
+
+				// new user
+				debug("%s: %d\n","creating new user", user_id);
+				user.SetId(user_id++);
+				user.SetSession("v2gvna14098bvdjtcpo7njh5t2"); // session ID copied from a testrun
+				users.push_back(user);
+
+				//let's select the best mapping option among four possible ones
+				Mapping_trial mapp1(*itDBRequest, 1);
+				mapp1.Mapp(&subNetwork);
+				mapp1.FreeMapp(&subNetwork);
+				Mapping_trial mapp2(*itDBRequest, 2);
+				mapp2.Mapp(&subNetwork);
+				mapp2.FreeMapp(&subNetwork);
+				Mapping_trial mapp3(*itDBRequest, 3);
+				mapp3.Mapp(&subNetwork);
+				mapp3.FreeMapp(&subNetwork);
+				Mapping_trial mapp4(*itDBRequest, 4);
+				mapp4.Mapp(&subNetwork);
+				mapp4.FreeMapp(&subNetwork);
+				if ((mapp1.GetStateMapping() == STATE_MAP_NODE_FAIL
+							|| mapp1.GetStateMapping() == STATE_MAP_LINK_FAIL)
+						&& (mapp2.GetStateMapping() == STATE_MAP_NODE_FAIL
+							|| mapp2.GetStateMapping() == STATE_MAP_LINK_FAIL)
+						&& (mapp3.GetStateMapping() == STATE_MAP_NODE_FAIL
+							|| mapp3.GetStateMapping() == STATE_MAP_LINK_FAIL)
+						&& (mapp4.GetStateMapping() == STATE_MAP_NODE_FAIL
+							|| mapp4.GetStateMapping() == STATE_MAP_LINK_FAIL)) {
+					//the mapping was not possible we put let the request wait
+					debug("%s \n","Mapping from database read request not possible.");
+					user.GetWaitingRequests()->push_back(**itDBRequest);
+					pthread_t t1;
+					struct arg_struct2 args;
+					args.user = &user;
+					args.req = *itDBRequest; //we have to pass the user request otherwise we are jus passing a copy of it
+					pthread_create(&t1, 0, function2, (void *) &args); // create a thread running function1
+					//sprintf(response, "MAP_FAIL&");
+					//send(csock, response, sizeof(response), 0);
+				} else {
+					debug("%s \n","Mapping from database read request is possible.");
+					mapping mapp = mapping(*itDBRequest);
+					debug("%s \n","Mapping achieved.");
+					//We try to sellect the best mapping among trials
+					double tempAvai = abs(mapp1.GetAvailability() - (*itDBRequest)->GetAvailability());
+					Mapping_trial * best = &mapp1;
+					if (tempAvai > abs(mapp2.GetAvailability() - (*itDBRequest)->GetAvailability())) {
+						tempAvai = abs(mapp2.GetAvailability() - (*itDBRequest)->GetAvailability());
+						best = &mapp2;
+					}
+					if (tempAvai > abs(mapp3.GetAvailability() - (*itDBRequest)->GetAvailability())) {
+						tempAvai = abs(mapp3.GetAvailability() - (*itDBRequest)->GetAvailability());
+						best = &mapp3;
+					}
+					if (tempAvai > abs(	mapp4.GetAvailability()	- (*itDBRequest)->GetAvailability())) {
+						tempAvai = abs(mapp4.GetAvailability() - (*itDBRequest)->GetAvailability());
+						best = &mapp4;
+					}
+					debug("%s \n","Selecting Best Mapping.");
+					mapp.ApplyBestMapping(best->GetNodeMapp(),
+							best->GetPathMapp(),
+							best->GetPathLength(), &subNetwork);
+					debug("%s \n","Assigning Best Mapping.");
+					(*itDBRequest)->SetMapping(&mapp);
+					cout	<< "The resulting availability of the best mapping is : "
+							<< (*itDBRequest)->GetMapping()->GetAvailability()
+							<< " while the required availability is : "
+							<< (*itDBRequest)->GetAvailability() << "\n";
+					//idRequest++;
+					sprintf(response, "MAP_DONE&%f&",
+							(*itDBRequest)->GetMapping()->GetAvailability());
+					user.GetRequests()->push_back(**itDBRequest);
+					pthread_t t1;
+					struct arg_struct args;
+					args.net = &subNetwork;
+					args.req = user.GetRequestById(
+							(*itDBRequest)->GetRequestNumber()); //we have to pass the user request otherwise we are jus passing a copy of it
+					pthread_create(&t1, 0, function1,
+							(void *) &args); // create a thread running function1
+					//send(csock, response, sizeof(response), 0);
+				}
+			}
+		}
+		else { // Else create a new DB that will be populated when a new request comes in
+			// debug print
+			debug("%s \n","NO database found, Creating a new DB");
+			ret_val = vdc_db.createDataBase();
+			if (ret_val == EXIT_SUCCESS) debug("%s \n","SUCCESS in Creating a new DB");
+			else  debug("%s \n","FAILURE while Creating a new DB");
+		}
+
 		// Socket creation
 		sock = socket(AF_INET, SOCK_STREAM, 0);
 		if (sock != INVALID_SOCKET) {
@@ -189,8 +314,9 @@ int main() {
 						if (!existsBySession(&users, session)) {
 							user.SetId(csock);
 							user.SetSession(session);
-							//cout << "creation of a new user : session id = "<< session << "\n";
+							cout << "creation of a new user : session id = "<< session << "\n";
 							users.push_back(user);
+// TODO User user; AFTER CONNECTION
 						} else {
 							user = *(getUserBySession(&users, session));
 						}
@@ -205,9 +331,14 @@ int main() {
 							RequestLoader rLoader;
 							printf("*****  \n%s\n********\n", buffer);
 							rLoader.Load(&request, WEB, idRequest, buffer);
-
+// TODO Request request; BEFORE EMBEDDING
 							//for testing-----------
 							request.DisplayRequest();
+							// write request to DB
+							debug("%s \n","write new request to DB");
+							ret_val = vdc_db.writeVDCRequestToDataBase(&request);
+							if (ret_val == EXIT_SUCCESS) debug("%s \n","SUCCESS in writing new request to DB");
+							else debug("%s \n","FAILURE in writing new request to DB");
 							//for testing-----------subNetwork.DisplaySubstrateEmbedding();
 							//let's select the best mapping option among four possible ones
 							Mapping_trial mapp1(&request, 1);
@@ -302,6 +433,7 @@ int main() {
 										best->GetPathLength(), &subNetwork);
 								//for testing-----------cout<<"The availability mapp is : "<<mapp.GetAvailability()<<"\n";
 								request.SetMapping(&mapp);
+// TODO request; AFTER EMBEDDING
 								//for testing-----------
 								//for testing-----------subNetwork.DisplaySubstrateEmbedding();
 								//for testing-----------request.GetMapping()->displayMapp();
@@ -319,6 +451,7 @@ int main() {
 								//for testing-----------request.DisplayRequest();
 
 								user.GetRequests()->push_back(request);
+// TODO user; AFTER EMBEDDING AND PUSHING REQUEST
 								//user.GetRequests()->push_back(&request);
 								//for testing-----------cout << " DISPLAY BEFORE PUSH BACK" << endl;
 								//for testing-----------user.GetRequestById(0)->DisplayRequest();
@@ -432,10 +565,18 @@ int main() {
 										//for testing-----------subNetwork.DisplaySubstrateEmbedding();
 										user.GetRequestById(id)->SetStatus(
 												STATE_ABORTED);
+// TODO user; AFTER DELETING
 										//user.GetRequestById(id)->GetMapping()->displayMapp();
 										pthread_mutex_unlock(&mutex);
 										sprintf(response, "%s&%d", "RMV_DONE",
 												id);
+
+										// Delete VDC Request from Database
+										debug("%s \n","remove a request from DB");
+										ret_val = vdc_db.removeVDCRequestFromDataBase(user.GetRequestById(id), double(time(0)));
+										if (ret_val == EXIT_SUCCESS) debug("%s \n","SUCCESS in removing request from DB");
+										else debug("%s \n","FAILURE in removing request from DB");
+
 									} else {
 										sprintf(response, "%s&%d", "RMV_FAILED",
 												id);

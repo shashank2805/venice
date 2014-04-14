@@ -21,6 +21,12 @@ public:
 	static string topology_file;
 	static string vdc_planner_address;
 	static string portal_address;
+	// database related information
+	static string mysql_server_address;
+	static int mysql_server_port;
+	static string mysql_server_user;
+	static string mysql_server_password;
+	static string mysql_database_name;
 };
 
 #endif /* CONFIG_H_ */

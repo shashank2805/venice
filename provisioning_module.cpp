@@ -173,7 +173,7 @@ void ProvisioningModule::generateFileAndExecute(map<string, vector<neighbor> > &
 void ProvisioningModule::provisionLinks(string vdc_name, vector<string> links, string application)
 {
 	ostringstream command;
-	command << "./linkProvBackground " << "129.97.119.133" << " "  << vdc_name << " " << application << " ";
+	command << "./nova_executor_background/linkProvBackground " << "129.97.119.133" << " "  << vdc_name << " " << application << " ";
 
 	for(vector<string>::iterator links_it = links.begin(); links_it != links.end(); links_it++)
 		command << "\"" << *links_it << "\" ";
