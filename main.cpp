@@ -136,7 +136,6 @@ string Config::mysql_server_password="";
 string Config::mysql_database_name="";
 
 int main() {
-
 	//----------- Variables to use for the server
 #if defined (WIN32)
 	WSADATA WSAData;
@@ -163,7 +162,6 @@ int main() {
 	ConfigLoader cLoader;
 	Config config;
 	cLoader.Load(config);
-
 	//----------- First we load the substrate network
 	Substrate_network subNetwork(0);
 	SubstrateLoader nLoader;

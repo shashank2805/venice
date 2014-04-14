@@ -24,8 +24,6 @@ VDCPlannerMysqlConnector::~VDCPlannerMysqlConnector() {
 }
 
 
-
-
 int VDCPlannerMysqlConnector::createDataBase() {
 
 	try {
@@ -58,7 +56,7 @@ int VDCPlannerMysqlConnector::createDataBase() {
 		con->setSchema(this->dataBaseName);
 
 		/*
-		 * 	int id;
+		 * 			int id;
 					std::string session;
 					//std::list<Request *> requests;
 					std::list<Request> requests;
@@ -138,7 +136,7 @@ int VDCPlannerMysqlConnector::createDataBase() {
 				"length INT,"
 				"name VARCHAR(30),"
 				"PRIMARY KEY  (requestID,linkID),"
-				"UNIQUE (nodeSource,nodeDestination))"
+				"UNIQUE (requestID,nodeSource,nodeDestination))"
 		);
 
 
