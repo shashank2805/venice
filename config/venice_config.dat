@@ -1,0 +1,7 @@
+key_pair mykey.pem
+image_id e8cd8309-524e-4b59-82de-34a716f248ee
+topology_file sub/SAVI_WT_EDGE.dat
+vdc_planner_address 127.0.0.1
+portal_address 127.0.0.1
+
+
