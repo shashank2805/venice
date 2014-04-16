@@ -18,6 +18,7 @@
 #include "Substrate_link.hpp"
 #include "Sub_node_type.h"
 #include "AdjNode.hpp"
+#include "def.h"
 
 using namespace std;
 

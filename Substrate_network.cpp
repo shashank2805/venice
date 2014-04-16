@@ -251,19 +251,19 @@ std::list<Substrate_link>* Substrate_network::GetSubstrateLinks() {
 	std::list<Sub_node_type>::iterator it3;
 
 	//operations
-	cout << "For substrate network with id = " << this->id << "\n";
-	cout << "Nodes :\n";
-	cout << "type 1 : " << this->GetTypeById(1)->GetSubstrateNodes()->size()<<"\n";
-	cout << "type 2 : " << this->GetTypeById(2)->GetSubstrateNodes()->size()<<"\n";
-	cout << "type 3 : " << this->GetTypeById(3)->GetSubstrateNodes()->size()<<"\n";
-	cout << "type 4 : " << this->GetTypeById(4)->GetSubstrateNodes()->size()<<"\n";
-	for (it3=this->types.begin(); it3!=this->types.end(); it3++)
-	{
+	debug("For Substrate Netowrk with ID: %f\n", this->id);
+	debug("Nodes of type1: %d, Nodes of type2: %d, Nodes of type3: %d, Nodes of type4: %d\n",
+			this->GetTypeById(1)->GetSubstrateNodes()->size(),
+			this->GetTypeById(2)->GetSubstrateNodes()->size(),
+			this->GetTypeById(3)->GetSubstrateNodes()->size(),
+			this->GetTypeById(4)->GetSubstrateNodes()->size());
+	/*
+	for (it3=this->types.begin(); it3!=this->types.end(); it3++) {
 		cout << "type : " << it3->GetSubstrateNodes()->size()<<"\n";
 		for (it1=it3->GetSubstrateNodes()->begin(); it1!=it3->GetSubstrateNodes()->end(); it1++)
 			it1->DisplayEmdeddedNodes();
-	}
-	cout << "Links :\n";
+	}*/
+	debug("Links:\n");
 	for (it2=this->links.begin(); it2!=this->links.end(); it2++)
 		it2->DisplayEmdeddedPaths();
 

@@ -36,15 +36,6 @@ using namespace std;
 #include "VDCPlannerMysqlConnector.h"
 
 
-/*for debug printing. comment-out the first line to disable the prints*/
-#define DEBUG 1
-#ifdef DEBUG
-#define debug(M, ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-#else
-#define debug(M, ...)
-#endif
-/*********************************************/
-
 #define PORT 8080
 
 #include "PlannerEngine.h"
@@ -136,7 +127,8 @@ string Config::mysql_server_password="";
 string Config::mysql_database_name="";
 
 int main() {
-	//----------- Variables to use for the server
+
+	//Variables to use for the server
 #if defined (WIN32)
 	WSADATA WSAData;
 	int error = WSAStartup(MAKEWORD(2,2), &WSAData);
@@ -156,22 +148,18 @@ int main() {
 	SOCKADDR_IN csin;
 	SOCKET csock;
 	socklen_t crecsize = sizeof(csin);
-	int idRequest;
+	int idRequest = 0;
 	std::list<User> users;
 	User user;
 	ConfigLoader cLoader;
 	Config config;
 	cLoader.Load(config);
+
 	//----------- First we load the substrate network
 	Substrate_network subNetwork(0);
 	SubstrateLoader nLoader;
 	nLoader.Load(&subNetwork);
-	//for testing-----------
 
-// TODO Substrate_network
-
-	//-----------now we load the configuration file
-	//----------- Now we wait for requests
 	if (!error) {
 
 		// Create Database object
@@ -198,6 +186,8 @@ int main() {
 				user.SetId(user_id++);
 				user.SetSession("v2gvna14098bvdjtcpo7njh5t2"); // session ID copied from a testrun
 				users.push_back(user);
+				debug("Current Embedding:\n");
+				subNetwork.DisplaySubstrateEmbedding();
 
 				//let's select the best mapping option among four possible ones
 				Mapping_trial mapp1(*itDBRequest, 1);
@@ -237,29 +227,36 @@ int main() {
 					//We try to sellect the best mapping among trials
 					double tempAvai = abs(mapp1.GetAvailability() - (*itDBRequest)->GetAvailability());
 					Mapping_trial * best = &mapp1;
+					debug("%s \n", "mapp1 is the temporarily selected best mapping");
 					if (tempAvai > abs(mapp2.GetAvailability() - (*itDBRequest)->GetAvailability())) {
 						tempAvai = abs(mapp2.GetAvailability() - (*itDBRequest)->GetAvailability());
 						best = &mapp2;
+						debug("%s \n", "mapp2 is the best mapping");
 					}
 					if (tempAvai > abs(mapp3.GetAvailability() - (*itDBRequest)->GetAvailability())) {
 						tempAvai = abs(mapp3.GetAvailability() - (*itDBRequest)->GetAvailability());
 						best = &mapp3;
+						debug("%s \n", "mapp3 is the best mapping");
 					}
 					if (tempAvai > abs(	mapp4.GetAvailability()	- (*itDBRequest)->GetAvailability())) {
 						tempAvai = abs(mapp4.GetAvailability() - (*itDBRequest)->GetAvailability());
 						best = &mapp4;
+						debug("%s \n", "mapp4 is the best mapping");
 					}
 					debug("%s \n","Selecting Best Mapping.");
+					best->displayMapp();
 					mapp.ApplyBestMapping(best->GetNodeMapp(),
 							best->GetPathMapp(),
 							best->GetPathLength(), &subNetwork);
 					debug("%s \n","Assigning Best Mapping.");
 					(*itDBRequest)->SetMapping(&mapp);
+					debug("Resulting Embedding:\n");
+					subNetwork.DisplaySubstrateEmbedding();
 					cout	<< "The resulting availability of the best mapping is : "
 							<< (*itDBRequest)->GetMapping()->GetAvailability()
 							<< " while the required availability is : "
 							<< (*itDBRequest)->GetAvailability() << "\n";
-					//idRequest++;
+
 					sprintf(response, "MAP_DONE&%f&",
 							(*itDBRequest)->GetMapping()->GetAvailability());
 					user.GetRequests()->push_back(**itDBRequest);
@@ -272,6 +269,7 @@ int main() {
 							(void *) &args); // create a thread running function1
 					//send(csock, response, sizeof(response), 0);
 				}
+				idRequest++;
 			}
 		}
 		else { // Else create a new DB that will be populated when a new request comes in
@@ -293,7 +291,7 @@ int main() {
 			sock_err = bind(sock, (SOCKADDR*) &sin, recsize);
 
 			if (sock_err != SOCKET_ERROR) {
-				idRequest = 0;
+				//idRequest = 0;
 				sock_err = listen(sock, 5);
 				while (1) {
 					if (sock_err != SOCKET_ERROR) {
@@ -314,7 +312,6 @@ int main() {
 							user.SetSession(session);
 							cout << "creation of a new user : session id = "<< session << "\n";
 							users.push_back(user);
-// TODO User user; AFTER CONNECTION
 						} else {
 							user = *(getUserBySession(&users, session));
 						}
@@ -329,7 +326,6 @@ int main() {
 							RequestLoader rLoader;
 							printf("*****  \n%s\n********\n", buffer);
 							rLoader.Load(&request, WEB, idRequest, buffer);
-// TODO Request request; BEFORE EMBEDDING
 							//for testing-----------
 							request.DisplayRequest();
 							// write request to DB
@@ -337,7 +333,9 @@ int main() {
 							ret_val = vdc_db.writeVDCRequestToDataBase(&request);
 							if (ret_val == EXIT_SUCCESS) debug("%s \n","SUCCESS in writing new request to DB");
 							else debug("%s \n","FAILURE in writing new request to DB");
-							//for testing-----------subNetwork.DisplaySubstrateEmbedding();
+							//for testing
+							debug("Current Embedding:\n");
+							subNetwork.DisplaySubstrateEmbedding();
 							//let's select the best mapping option among four possible ones
 							Mapping_trial mapp1(&request, 1);
 							mapp1.Mapp(&subNetwork);
@@ -379,6 +377,7 @@ int main() {
 													== STATE_MAP_LINK_FAIL)) {
 								//the mapping was not possible we put let the request wait
 								user.GetWaitingRequests()->push_back(request);
+								idRequest++;
 								pthread_t t1;
 								struct arg_struct2 args;
 								args.user = &user;
@@ -394,6 +393,7 @@ int main() {
 										mapp1.GetAvailability()
 												- request.GetAvailability());
 								Mapping_trial * best = &mapp1;
+								debug("%s \n", "mapp1 is the default best mapping");
 								if (tempAvai
 										> abs(
 												mapp2.GetAvailability()
@@ -403,6 +403,7 @@ int main() {
 													mapp2.GetAvailability()
 															- request.GetAvailability());
 									best = &mapp2;
+									debug("%s \n", "mapp2 is the best mapping");
 								}
 								if (tempAvai
 										> abs(
@@ -413,6 +414,7 @@ int main() {
 													mapp3.GetAvailability()
 															- request.GetAvailability());
 									best = &mapp3;
+									debug("%s \n", "mapp3 is the best mapping");
 								}
 								if (tempAvai
 										> abs(
@@ -423,7 +425,9 @@ int main() {
 													mapp4.GetAvailability()
 															- request.GetAvailability());
 									best = &mapp4;
+									debug("%s \n", "mapp4 is the best mapping");
 								}
+								best->displayMapp();
 								//-----------------------------------------------
 								//for testing-----------cout<<"The resulting availability of the best mapping is : "<<best->GetAvailability()<<" while the required availability is : "<<request.GetAvailability()<<"\n";
 								mapp.ApplyBestMapping(best->GetNodeMapp(),
@@ -431,11 +435,12 @@ int main() {
 										best->GetPathLength(), &subNetwork);
 								//for testing-----------cout<<"The availability mapp is : "<<mapp.GetAvailability()<<"\n";
 								request.SetMapping(&mapp);
-// TODO request; AFTER EMBEDDING
-								//for testing-----------
-								//for testing-----------subNetwork.DisplaySubstrateEmbedding();
+								//for testing
 								//for testing-----------request.GetMapping()->displayMapp();
 								//for testing-----------request.FreeMapping(&subNetwork);
+
+								debug("Resulting Embedding:\n");
+								subNetwork.DisplaySubstrateEmbedding();
 								cout
 										<< "The resulting availability of the best mapping is : "
 										<< request.GetMapping()->GetAvailability()
@@ -449,7 +454,6 @@ int main() {
 								//for testing-----------request.DisplayRequest();
 
 								user.GetRequests()->push_back(request);
-// TODO user; AFTER EMBEDDING AND PUSHING REQUEST
 								//user.GetRequests()->push_back(&request);
 								//for testing-----------cout << " DISPLAY BEFORE PUSH BACK" << endl;
 								//for testing-----------user.GetRequestById(0)->DisplayRequest();

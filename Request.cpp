@@ -440,35 +440,23 @@ void Request::DisplayRequest() {
 	std::list<Path>::iterator it3;
 
 	//operations
-	cout << "For Request with ReqNumber = " << this->reqNumber << "\n";
-	cout << "Application = " << this->application << "\n";
-	cout << "Virtual Nodes :\n";
+	debug("For Request with ReqNumber: %d, Application: %s\n", this->reqNumber, this->application.c_str());
+	debug("Virtual Nodes:\n");
 	for (it1 = this->groups.begin(); it1 != this->groups.end(); it1++) {
-		cout << "Group : " << it1->GetId() << "\n";
-		//cout << " size of nodes : "<< it1->GetNodes()->size();
+		debug("GroupID: %d, Number of Nodes: %d\n", it1->GetId(), it1->GetNodes()->size());
 		for (it2 = it1->GetNodes()->begin(); it2 != it1->GetNodes()->end();
 				it2++) {
-
-			cout << " id : " << it2->GetId() << " @ : " << &(*it2)
-					<< " bandwidth : " << it2->GetBandwidth() << " cpu : "
-					<< it2->GetCpu() << " memory : " << it2->GetMemory()
-					<< " flavor : " << it2->GetFlavor() << " type : "
-					<< it2->GetType() << endl;
-
+			debug("NodeID: %d, bandwidth: %f, cpu: %f, memory: %f, flavour: %f, type: %f\n",
+					it2->GetId(), it2->GetBandwidth(), it2->GetCpu(), it2->GetMemory(),
+					it2->GetFlavor(), it2->GetType());
 		}
-
 	}
-	cout << "Virtual Links :\n";
-	cout << "size links " << this->links.size() << "\n";
+	debug("Virtual Links:\n");
+	debug("Number of Links: %d\n", links.size());
 	for (it3 = this->links.begin(); it3 != this->links.end(); it3++) {
-		cout << "id : " << it3->GetId() << "name : " << it3->GetName()
-				<< " bandwidth : " << it3->GetBandwidth() << " from :  "
-				//<< it3->GetSourceNode()->GetId() << " to : "
-				<< it3->GetSourceNode_id() << "  to : "
-				//<< it3->GetSourceNode()->GetId() << " to : @ "
-				//<< it3->GetDestinationNode()->GetId() << "\n";
-				<< it3->GetDestinationNode_id() << "\n";
-		//<< it3->GetDestinationNode()->GetId() << "\n";
+		debug("LinkID: %d, LinkName: %s, bandwidth: %f, SourceNode: %d, DestinationNode: %d\n",
+				it3->GetId(), it3->GetName().c_str(), it3->GetBandwidth(), it3->GetSourceNode_id(),
+				it3->GetDestinationNode_id());
 	}
 }
 

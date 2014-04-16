@@ -89,10 +89,12 @@ bool Mapping_trial::Mapp(Substrate_network* sub){
 		this->availability=avaiMapp(sub);
 		return abort2;
 	}
+	else { // this means that node mapping was not successful, so failure overall
+		cout<<"--STATE_MAP_NODE_FAIL-- for Trial "<< this->id <<"\n";
+		this->stateMapping = STATE_MAP_NODE_FAIL;
+	}
 	this->availability=avaiMapp(sub);
 	return abort;
-	
-	
 }
 
 bool Mapping_trial::MappOnType(Virtual_node* node,Substrate_network* sub,int type){

@@ -99,14 +99,13 @@ void Substrate_link::DisplayEmdeddedPaths(){
 	std::list<Path>::iterator it1;
 	if(this->embeddedPaths.empty())
 	{
-		cout<<" No Embedded Paths for the Substrate Link with id : "<<this->id<<"\n";
+		debug("No Embedded Paths for the Substrate Link with id: %d\n", this->id);
 	}
 	else
 	{
-		cout<<" Embedded Paths for the Substrate Link with id : "<<this->id<<" are : \n";
-			for (it1=this->embeddedPaths.begin(); it1!=this->embeddedPaths.end(); it1++)
-			{
-				cout<<" Path id : "<<it1->GetId()<<"\n";
+		debug("Embedded Paths for the Substrate Link with id : %d, are:\n", this->id);
+			for (it1=this->embeddedPaths.begin(); it1!=this->embeddedPaths.end(); it1++){
+				debug("Path id: %d\n", it1->GetId());
 			}
 	}
 }

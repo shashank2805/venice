@@ -44,8 +44,8 @@ void SubstrateLoader::Load(Substrate_network * net)
     for (j = 0; j < nbNodes; j ++) 
 	{
 		int ret = fscanf(fp, "%d %s %d %d %d %d %lf\n", &id,&name,&cpu,&mem,&disk,&type,&avai);
-
-		//for testing -------printf("%d name : %s cpu : %d mem : %d disk : %d type : %d avai : %lf\n", id,name,cpu,mem,disk,type,avai);
+		//for testing
+		//printf("Physical Node id: %d, name: %s, cpu: %d, mem: %d, disk: %d, type: %d, avai: %lf \n", id,name,cpu,mem,disk,type,avai);
 		Substrate_node node(id,(double)cpu,(double)mem,(double)disk,type,(double)bw,active,name,avai);
 		if(avai == 90)
 			net->GetTypeById(1)->GetSubstrateNodes()->push_back(node);

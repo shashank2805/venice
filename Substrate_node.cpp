@@ -179,7 +179,7 @@ void Substrate_node::DisplayEmdeddedNodes() {
 	if (this->GetEmbeddedNodes()->empty()) {
 		cout << "No embedded nodes for the substrate node with id : "<<this->id<<"\n";
 	} else {
-		cout << "Embedded nodes for the substrate node with @ : "<<this<<" are\n";
+		cout << "Embedded nodes for the substrate node with id : "<<this->id<<" @ : "<<this<<" are\n";
 		for (it1 = this->embeddedNodes.begin();
 				it1 != this->embeddedNodes.end(); it1++) {
 			cout << "** " << it1->GetId() << " \n";

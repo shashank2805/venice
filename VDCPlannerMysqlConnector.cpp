@@ -55,8 +55,9 @@ int VDCPlannerMysqlConnector::createDataBase() {
 
 		con->setSchema(this->dataBaseName);
 
+#if 0
 		/*
-		 * 			int id;
+		 * 	int id;
 					std::string session;
 					//std::list<Request *> requests;
 					std::list<Request> requests;
@@ -68,7 +69,7 @@ int VDCPlannerMysqlConnector::createDataBase() {
 				"session VARCHAR(30),"
 				"PRIMARY KEY  (userID) )"
 		);
-
+#endif
 
 		/*
 				  	A Request
@@ -154,7 +155,7 @@ int VDCPlannerMysqlConnector::createDataBase() {
 					string embeddingNode_name;
 		 */
 
-		//virtual_machines(requestID, nodeID, partitionID, cpu, memory, disk, flavor, taskState, powerState, publicIP, privateIP, embeddingNodeName, priorityGroup)
+		//virtual_machines(requestID, nodeID, partitionID, cpu, memory, disk, flavor, taskState, powerState, publicIP, privateIP, embeddingNodeName, priorityGroup,type)
 		stmt->execute("CREATE TABLE IF NOT EXISTS virtual_machines ("
 				"requestID INT UNSIGNED  NOT NULL,"
 				"nodeID INT UNSIGNED  NOT NULL,"
@@ -169,10 +170,11 @@ int VDCPlannerMysqlConnector::createDataBase() {
 				"privateIP VARCHAR(30),"
 				"embeddingNodeName VARCHAR(30),"
 				"priorityGroup INT NOT NULL,"
+				"type INT UNSIGNED NOT NULL,"
 				"PRIMARY KEY  (requestID,nodeID))"
 		);
 
-
+#if 0
 		/*
 
 				 	double availability;
@@ -251,7 +253,9 @@ int VDCPlannerMysqlConnector::createDataBase() {
 				"UNIQUE  (requestID,virtualNodeSource, virtualNodeDestination, physicalNodeSource, physicalNodeDestination, mappingBegin))"
 		);
 
+#endif
 
+#if 0
 		/*
 		 * Create the database for removed VDC requests (Keep trace of the old users that submitted the requests)
 		 */
@@ -280,7 +284,7 @@ int VDCPlannerMysqlConnector::createDataBase() {
 				"FOR EACH ROW "
 				"BEGIN "
 				"INSERT INTO virtual_machines_archive "
-				"VALUES (old.requestID, old.nodeID, old.partitionID, old.cpu, old.memory, old.disk, old.flavor, old.taskState, old.powerState, old.publicIP, old.privateIP, old.embeddingNodeName, old.priorityGroup) "
+				"VALUES (old.requestID, old.nodeID, old.partitionID, old.cpu, old.memory, old.disk, old.flavor, old.taskState, old.powerState, old.publicIP, old.privateIP, old.embeddingNodeName, old.priorityGroup, old.type) "
 				";"
 				"END"
 		);
@@ -317,7 +321,7 @@ int VDCPlannerMysqlConnector::createDataBase() {
 				";"
 				"END"
 		);
-
+#endif
 
 		delete stmt;
 		delete con;
@@ -439,8 +443,8 @@ int VDCPlannerMysqlConnector::writeVDCRequestToDataBase(Request* request) {
 			for (std::list<Virtual_node>::iterator itVirtualNode = gr.GetNodes()->begin(); itVirtualNode != gr.GetNodes()->end(); itVirtualNode++){
 				Virtual_node vm = *itVirtualNode;
 				//Add the VM to the data base
-				//virtual_machines(requestID, nodeID, partitionID, cpu, memory, disk, flavor, taskState, powerState, publicIP, privateIP, embeddingNodeName, priorityGroup)
-				pstmt = con->prepareStatement("INSERT IGNORE INTO virtual_machines VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+				//virtual_machines(requestID, nodeID, partitionID, cpu, memory, disk, flavor, taskState, powerState, publicIP, privateIP, embeddingNodeName, priorityGroup, type)
+				pstmt = con->prepareStatement("INSERT IGNORE INTO virtual_machines VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 				pstmt->setInt(1, request->GetRequestNumber());
 				pstmt->setInt(2, vm.GetId());
 				pstmt->setInt(3, vm.GetId()); //Set the partition ID to whatever makes sense for you
@@ -454,13 +458,13 @@ int VDCPlannerMysqlConnector::writeVDCRequestToDataBase(Request* request) {
 				pstmt->setString(11, vm.GetPrivateIp());
 				pstmt->setString(12, "NIL"); // placeholder name
 				pstmt->setInt(13 , i); //The priorityGroup
+				pstmt->setInt(14,vm.GetType());
 				pstmt->executeUpdate();
 
 				//Add the VM mapping (virtual machine to physical node) to the data base
 				//mapping_virtual_machine (requestID, VMID, subsrateNodeID, mappingBegin, mappingEnd)
 #if 0
 				if(vm.GetEmbeddingNode() != NULL){
-printf("EmbeddingNODES\n");
 					pstmt = con->prepareStatement("INSERT IGNORE INTO mapping_virtual_machines VALUES (?,?,?,?,?)");
 					pstmt->setInt(1, request->GetRequestNumber());
 					pstmt->setInt(2, vm.GetId());
@@ -474,11 +478,9 @@ printf("EmbeddingNODES\n");
 			i++; // increment the priority group
 		}
 
-printf("Begin writing Links to db\n");
 		//Write the Links and their corresponding mappings
 		for (std::list<Path>::iterator it = request->GetLinks()->begin(); it != request->GetLinks()->end(); it++){
 			Path link = *it;
-printf("write Links to db\n");
 			//Write the link to the database
 			//virtual_links(requestID, linkID, nodeSource, nodeDestination, partitionSource, partitionDestination, bandwidth, delay, status, length, name)
 			pstmt = con->prepareStatement("INSERT IGNORE INTO virtual_links VALUES (?,?,?,?,?,?,?,?,?,?,?)");
@@ -498,7 +500,6 @@ printf("write Links to db\n");
 			//Write the mapping of the link to the database
 #if 0
 			if(link.GetSubstrateLinks() != NULL){
-printf("GetSubstrateLINKS\n");
 				for (std::list<Substrate_link>::iterator itSubstrateLinks = link.GetSubstrateLinks()->begin(); itSubstrateLinks != link.GetSubstrateLinks()->end(); itSubstrateLinks++){
 					Substrate_link subL = *itSubstrateLinks;
 					//mapping_virtual_link (requestID, virtualLinkID, virtualNodeSource, virtualNodeDestination, physicalLinkID, physicalNodeSource, physicalNodeDestination,  mappingBegin, mappingEnd)
@@ -517,7 +518,6 @@ printf("GetSubstrateLINKS\n");
 			}
 #endif
 		}
-printf("End writing Links to db\n");
 		delete pstmt;
 		delete con;
 
@@ -559,15 +559,12 @@ Request* VDCPlannerMysqlConnector::readVDCRequestClassFromDataBase(int idRequest
 		//con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
 
 		con->setSchema(this->dataBaseName);
-printf(" READ REQUESTS\n");
 		pstmt1 = con->prepareStatement("SELECT * FROM vdc_requests WHERE requestID = (?)");
 		pstmt1->setInt(1,idRequest);
 		res1 = pstmt1->executeQuery();
 		if(!res1->next()){
 			//The request does not exist in the data base
-printf("NO REQUESTS\n");
 		}else{
-printf("REQUESTS\n");
 			//The request exists in the data base, build the VDC request
 			//vdc_requests (requestID, arrival, duration, revenue, numberNodes, numberLinks, limitCarbonEmission, split, type, topo, availability, status, name, userName, application)
 
@@ -586,8 +583,7 @@ printf("REQUESTS\n");
 			request->SetApplication(res1->getString("application")); //request->SetName(string(res->getString("status").c_str()));
 
 			//Read the VMs
-			//virtual_machines(requestID, nodeID, partitionID, cpu, memory, disk, flavor, taskState, powerState, publicIP, privateIP, embeddingNodeName, priorityGroup)
-printf("NODES START\n");
+			//virtual_machines(requestID, nodeID, partitionID, cpu, memory, disk, flavor, taskState, powerState, publicIP, privateIP, embeddingNodeName, priorityGroup, type)
 			//All VMs will be in the same priority group
 			std::list<Virtual_node>* listVMs = new std::list<Virtual_node>();
 			pstmt1 = con->prepareStatement("SELECT * FROM virtual_machines WHERE requestID = (?) ORDER BY nodeID ASC ");
@@ -605,6 +601,8 @@ printf("NODES START\n");
 				vm->SetPowerState(res1->getString("powerState"));
 				vm->SetPublicIp(res1->getString("publicIP"));
 				vm->SetPrivateIp(res1->getString("privateIP"));
+				vm->SetType(res1->getInt("type"));
+				vm->SetBandwidth(0);
 
 #if 0
 				//Read the mapping of this VM
@@ -632,18 +630,12 @@ printf("NODES START\n");
 				 * I suggest that you do this at the end of the reading of the request and the substrate network, you can then do the combination
 				 */
 				listVMs->push_back(*vm);
-printf("NODES END\n");
 			}
-			//std::list<Priority_group>*listPriorityGroup = new std::list<Priority_group>();
 			Priority_group group = Priority_group(1);
 			group.SetId(1);
 			group.SetNodes(listVMs);
-			//listPriorityGroup->push_back(group);
-			//TODO(AIMAL: DISCUSS): How to add this list (listPriorityGroup) to the request
 			request->GetGroups()->push_back(group);
 
-
-printf("START LINKS\n");
 			//Read the links
 			pstmt1 = con->prepareStatement("SELECT * FROM virtual_links WHERE requestID = (?)");
 			pstmt1->setInt(1,idRequest);
@@ -653,18 +645,17 @@ printf("START LINKS\n");
 			//virtual_links(requestID, linkID, nodeSource, nodeDestination, partitionSource, partitionDestination, bandwidth, delay, status, length, name)
 			while(res1->next()){
 
-printf("LINK LOOP START\n");
 				int id = res1->getInt("linkID");
 				int vmFrom = res1->getInt("nodeSource");
 				int vmTo = res1->getInt("nodeDestination");
 				double bw = res1->getDouble("bandwidth");
 				Virtual_node * from = request->GetNodeById(vmFrom); //The nodes have already been read in the list of nodes
 				Virtual_node * to = request->GetNodeById(vmTo);
-				Path* l = new Path(id, vmFrom, from, vmFrom , to, bw);
+				Path* l = new Path(id, vmFrom, from, vmTo , to, bw);
 
 				l->SetStatus(res1->getString("status"));
 				l->SetName(res1->getString("name"));
-				l->SetLength(1);
+				l->SetLength(res1->getInt("length"));
 
 				//TODO(Aimal: Discuss) This push of path into the path list was not done
 				request->GetLinks()->push_back(*l);
@@ -696,12 +687,10 @@ printf("LINK LOOP START\n");
 				 */
 #endif
 
-				//TODO(Aimal): Discuss this extra bit
 				request->SetRevenue((request->GetRevenue()*request->GetDuration())/(double)60);
 
 //				delete pstmtMappings;
 //				delete resMappings;
-printf("END LINKS\n");
 			}//end While res1->next() //Number of links
 		}
 
@@ -710,7 +699,6 @@ printf("END LINKS\n");
 		//delete res2;
 		//delete pstmt2;
 		delete con;
-printf("END READ\n");
 
 	} catch (sql::SQLException &e) {
 		cout << "# ERR: SQLException in " << __FILE__;
@@ -760,7 +748,6 @@ vector<Request*>* VDCPlannerMysqlConnector::readAllVDCRequestsClassFromDataBase(
 			 req->DisplayRequest();
 
 			listResults->push_back(req);
-			printf("welp, here we are\n");
 		}//End While on the number of request
 
 		delete res;
@@ -803,6 +790,7 @@ int VDCPlannerMysqlConnector::removeVDCRequestFromDataBase(Request* request, dou
 
 		//Update the mapping end first
 
+#if 0
 		//Update the old mapping
 		pstmt = con->prepareStatement(
 				"UPDATE mapping_virtual_machine SET mappingEnd = (?)"
@@ -811,7 +799,9 @@ int VDCPlannerMysqlConnector::removeVDCRequestFromDataBase(Request* request, dou
 		pstmt->setDouble(1,t);
 		pstmt->setInt(2,request->GetRequestNumber());
 		pstmt->executeUpdate();
+#endif
 
+#if 0
 		pstmt = con->prepareStatement(
 				"UPDATE mapping_virtual_link SET mappingEnd = (?)"
 				"WHERE requestID = (?) AND ((mappingEnd IS NULL) OR (mappingEnd = -1))"
@@ -819,10 +809,19 @@ int VDCPlannerMysqlConnector::removeVDCRequestFromDataBase(Request* request, dou
 		pstmt->setDouble(1,t);
 		pstmt->setInt(2,request->GetRequestNumber());
 		pstmt->executeUpdate();
+#endif
 
-
+		//delete requests
 		pstmt = con->prepareStatement("DELETE FROM vdc_requests WHERE requestID = (?)");
-		pstmt->setInt(2,request->GetRequestNumber());
+		pstmt->setInt(1,request->GetRequestNumber());
+		pstmt->executeUpdate();
+		//delete virtual nodes
+		pstmt = con->prepareStatement("DELETE FROM virtual_machines WHERE requestID = (?)");
+		pstmt->setInt(1,request->GetRequestNumber());
+		pstmt->executeUpdate();
+		//delete virtual links
+		pstmt = con->prepareStatement("DELETE FROM virtual_links WHERE requestID = (?)");
+		pstmt->setInt(1,request->GetRequestNumber());
 		pstmt->executeUpdate();
 
 		/*

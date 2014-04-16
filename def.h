@@ -65,4 +65,17 @@
 
 #define QUEING_DELAY 60
 
+/*for debug printing. comment-out the first line to disable the prints*/
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+
+#define DEBUG 1
+#ifdef DEBUG
+#define debug(M, ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#define debug(M, ...)
+#endif
+/*********************************************/
+
 #endif//DEF_H

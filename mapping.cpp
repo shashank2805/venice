@@ -39,6 +39,8 @@ void mapping::ApplyBestMappingNodes(int * tab,Substrate_network* sub){
 		for (it2=it1->GetNodes()->begin(); it2!=it1->GetNodes()->end(); it2++)
 		{
 			it2->SetEmbeddingNode(sub->GetNodeById(tab[i]));
+			Substrate_node* nd = sub->GetNodeById(tab[i]);
+			int idNode = tab[i];
 			it2->SetEmbeddingNode_name(sub->GetNodeById(tab[i])->GetName());
 			sub->GetNodeById(tab[i])->GetEmbeddedNodes()->push_back(*it2);
 			sub->GetNodeById(tab[i])->GetEmbeddedNodes_id()->push_back(it2->GetId());
@@ -84,21 +86,21 @@ void mapping::displayMapp(){
 	switch(this->stateMapping)
 	{
 	case STATE_MAP_NODE:
-		cout<<"the stateMapping of the request of number"<<this->request->GetRequestNumber()<<" is STATE_MAP_NODE"<<endl;
+		debug("the stateMapping of the request of number: %d, is STATE_MAP_NODE\n", this->request->GetRequestNumber());
 		break;
 	case STATE_MAP_NODE_FAIL:
-		cout<<"the stateMapping of the request of number"<<this->request->GetRequestNumber()<<" is STATE_MAP_NODE_FAIL"<<endl;
+		debug("the stateMapping of the request of number: %d, is STATE_MAP_NODE_FAIL\n", this->request->GetRequestNumber());
 		break;
 	case STATE_NEW:
-		cout<<"the stateMapping of the request of number"<<this->request->GetRequestNumber()<<" is STATE_NEW"<<endl;
+		debug("the stateMapping of the request of number: %d, is STATE_NEW\n", this->request->GetRequestNumber());
 		break;
 	case STATE_MAP_LINK:
-		cout<<"the stateMapping of the request of number"<<this->request->GetRequestNumber()<<" is STATE_MAP_LINK"<<endl;
+		debug("the stateMapping of the request of number: %d, is STATE_MAP_LINK\n", this->request->GetRequestNumber());
 		displayMappNode();
 		displayMappPath();
 		break;
 	case STATE_EXPIRE:
-		cout<<"the stateMapping of the request of number"<<this->request->GetRequestNumber()<<" is STATE_EXPIRE"<<endl;
+		debug("the stateMapping of the request of number: %d, is STATE_EXPIRE\n", this->request->GetRequestNumber());
 		break;
 	}
 
@@ -113,12 +115,11 @@ void mapping::displayMappNode(){
 	std::list<Substrate_link>::iterator it4;
 
 	//operations
-	for (it1=this->request->GetGroups()->begin(); it1!=this->request->GetGroups()->end(); it1++)
-	{
-		cout << "Group : " << it1->GetId()<< "\n";
-		for (it2=it1->GetNodes()->begin(); it2!=it1->GetNodes()->end(); it2++)
-		{
-			cout << "id : " << it2->GetId()<< " mapped to the substrate node : "<<it2->GetEmbeddingNode()->GetId()<<" of availability : "<<it2->GetEmbeddingNode()->GetAvailability()<<"\n";
+	for (it1=this->request->GetGroups()->begin(); it1!=this->request->GetGroups()->end(); it1++) {
+		debug("GroupID: %d\n", it1->GetId());
+		for (it2=it1->GetNodes()->begin(); it2!=it1->GetNodes()->end(); it2++) {
+			debug("NodeID: %d, Mapped to Substrate Node: %d, of Availability: %f\n",
+					it2->GetId(), it2->GetEmbeddingNode()->GetId(), it2->GetEmbeddingNode()->GetAvailability());
 		}
 	}
 }
@@ -130,11 +131,10 @@ void mapping::displayMappPath(){
 	std::list<Substrate_link>::iterator it4;
 
 	//operations
-	for (it3=this->request->GetLinks()->begin(); it3!=this->request->GetLinks()->end(); it3++)
-	{
-		for (it4=it3->GetSubstrateLinks()->begin(); it4!=it3->GetSubstrateLinks()->end(); it4++)
-		{
-			cout << "id : " << it3->GetId()<< " mapped to the substrate link : "<<it4->GetId()<<" of availability : "<<it4->GetAvailability()<<"\n";
+	for (it3=this->request->GetLinks()->begin(); it3!=this->request->GetLinks()->end(); it3++) {
+		for (it4=it3->GetSubstrateLinks()->begin(); it4!=it3->GetSubstrateLinks()->end(); it4++) {
+			debug("LinkID: %d, Mapped to Substrate Link: %d, of Availability: %f\n",
+					it3->GetId(), it4->GetId(), it4->GetAvailability());
 		}
 	}
 }

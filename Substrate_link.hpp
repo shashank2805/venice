@@ -16,6 +16,7 @@
 #include "Link.hpp"
 #include "Substrate_node.hpp"
 #include "Path.hpp"
+#include "def.h"
 
 class Substrate_link : public Link {
 public:
