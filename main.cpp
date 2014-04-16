@@ -567,7 +567,6 @@ int main() {
 										//for testing-----------subNetwork.DisplaySubstrateEmbedding();
 										user.GetRequestById(id)->SetStatus(
 												STATE_ABORTED);
-// TODO user; AFTER DELETING
 										//user.GetRequestById(id)->GetMapping()->displayMapp();
 										pthread_mutex_unlock(&mutex);
 										sprintf(response, "%s&%d", "RMV_DONE",

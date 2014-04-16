@@ -437,7 +437,7 @@ int VDCPlannerMysqlConnector::writeVDCRequestToDataBase(Request* request) {
 
 		//Write the VMs and their corresponding mappings
 		std::list<Priority_group>*grp_list = request->GetGroups();
-		int i = 1; //TODO(Aimal): start at 1?
+		int i = 1;
 		for (std::list<Priority_group>::iterator itPrioGroup = grp_list->begin(); itPrioGroup != grp_list->end(); itPrioGroup++){
 			Priority_group gr = *itPrioGroup;
 			for (std::list<Virtual_node>::iterator itVirtualNode = gr.GetNodes()->begin(); itVirtualNode != gr.GetNodes()->end(); itVirtualNode++){
@@ -492,7 +492,7 @@ int VDCPlannerMysqlConnector::writeVDCRequestToDataBase(Request* request) {
 			pstmt->setInt(6, 0); //No meaning for the partition in this case
 			pstmt->setDouble(7,link.GetBandwidth());
 			pstmt->setDouble(8,10000); //The delay is not mentioned so far in the Request, put a high value
-			pstmt->setString(9,link.GetStatus()); //TODO(Aimal): GetStatus is not implemented
+			pstmt->setString(9,link.GetStatus());
 			pstmt->setInt(10, link.GetLength());
 			pstmt->setString(11,link.GetName());
 			pstmt->executeUpdate();
@@ -625,10 +625,6 @@ Request* VDCPlannerMysqlConnector::readVDCRequestClassFromDataBase(int idRequest
 					}
 				}
 #endif
-				/*
-				 * TODO:(AIMAL: Discuss) What is missing for the VM is the substrate node to which it was mapped (using vm->SetEmbeddingNode())
-				 * I suggest that you do this at the end of the reading of the request and the substrate network, you can then do the combination
-				 */
 				listVMs->push_back(*vm);
 			}
 			Priority_group group = Priority_group(1);
@@ -656,8 +652,6 @@ Request* VDCPlannerMysqlConnector::readVDCRequestClassFromDataBase(int idRequest
 				l->SetStatus(res1->getString("status"));
 				l->SetName(res1->getString("name"));
 				l->SetLength(res1->getInt("length"));
-
-				//TODO(Aimal: Discuss) This push of path into the path list was not done
 				request->GetLinks()->push_back(*l);
 				request->IncrementRevenue(bw/100);
 
