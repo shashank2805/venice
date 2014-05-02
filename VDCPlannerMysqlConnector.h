@@ -42,7 +42,6 @@
 
 using namespace std;
 
-
 class VDCPlannerMysqlConnector {
 public:
 
@@ -52,8 +51,8 @@ public:
 	string password;
 	int mysqlServerPort;
 
-
-	VDCPlannerMysqlConnector(string mysqlServerAddress, int mysqlServerPort, string user, string pass, string dataBaseName) ;
+	VDCPlannerMysqlConnector(string mysqlServerAddress, int mysqlServerPort, string user, string pass,
+			string dataBaseName);
 	virtual ~VDCPlannerMysqlConnector();
 
 	bool doesDataBaseExist();
@@ -61,11 +60,20 @@ public:
 	int createDataBase();
 	void deleteDataBase();
 
-
+	/* Writes the passed request and mapping into the Data Base */
 	int writeVDCRequestToDataBase(Request* request);
-	Request* readVDCRequestClassFromDataBase(int idRequest);
 
-	vector<Request*>* readAllVDCRequestsClassFromDataBase();
+	//Request* readVDCRequestClassFromDataBase(int idRequest);
+	/* Reads request, virtual node, vitual link and mapping (node, link) tables from Data Base and
+	 * populates the subNetwork with appropriate assignment of link and node pointers.
+	 * Returns: the request read from Data Base and modified Substrate_network object pointer */
+	Request* readVDCRequestClassFromDataBase(int idRequest, Substrate_network *subNetwork);
+
+	/* Reads all the requests and accompanying tables from the Data Base using readVDCRequestClassFromDataBase
+	 * function
+	 * Returns: std::vector containing all the requests, and a modified Substrate_network object with
+	 * appropriate assignment of link and node pointers. */
+	vector<Request*>* readAllVDCRequestsClassFromDataBase(Substrate_network *subNetwork);
 
 	int removeVDCRequestFromDataBase(Request* request, double t);
 

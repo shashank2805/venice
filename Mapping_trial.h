@@ -24,6 +24,7 @@ public:
 	double avaiMappNode(Substrate_network* sub);
 	double avaiMappPath(Substrate_network* sub);
 
+
 private:
 	int * node_mapp;
 	std::list<int> * path_mapp;//tableu de listes d'entiers

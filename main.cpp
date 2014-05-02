@@ -35,7 +35,6 @@ using namespace std;
 #include "Config.h"
 #include "VDCPlannerMysqlConnector.h"
 
-
 #define PORT 8080
 
 #include "PlannerEngine.h"
@@ -114,17 +113,17 @@ User * getUserBySession(std::list<User>* users, std::string session) {
 	return &(*it1);
 }
 
-string Config::image_id="";
-string Config::key_pair="";
-string Config::portal_address="";
-string Config::topology_file="";
-string Config::vdc_planner_address="";
+string Config::image_id = "";
+string Config::key_pair = "";
+string Config::portal_address = "";
+string Config::topology_file = "";
+string Config::vdc_planner_address = "";
 // database related information
-string Config::mysql_server_address="";
-int Config::mysql_server_port=0;
-string Config::mysql_server_user="";
-string Config::mysql_server_password="";
-string Config::mysql_database_name="";
+string Config::mysql_server_address = "";
+int Config::mysql_server_port = 0;
+string Config::mysql_server_user = "";
+string Config::mysql_server_password = "";
+string Config::mysql_database_name = "";
 
 int main() {
 
@@ -164,120 +163,117 @@ int main() {
 
 		// Create Database object
 		// NOTE: this information must be changed and code recompiled to reflect the location of the database
-		VDCPlannerMysqlConnector vdc_db(config.mysql_server_address, config.mysql_server_port,
-				config.mysql_server_user, config.mysql_server_password, config.mysql_database_name);
+		VDCPlannerMysqlConnector vdc_db(config.mysql_server_address, config.mysql_server_port, config.mysql_server_user,
+				config.mysql_server_password, config.mysql_database_name);
 
-		if(vdc_db.doesDataBaseExist()) { //if DB is pre-existing, use it.
-			debug("%s \n","Database exists.");
+		if (vdc_db.doesDataBaseExist()) { //if DB is pre-existing, use it.
+			debug("%s \n", "Database exists.");
 			std::vector<Request*>* db_requests;
-			std::vector<Request*>::iterator itDBRequest;
+			std::vector<Request*>::iterator it_db_requests;
 			int user_id = 1;
-			debug("%s \n","Beginning to read all requests from Database");
-			db_requests = vdc_db.readAllVDCRequestsClassFromDataBase();
-			debug("%s: %d\n","Successfully read requests from DB:", db_requests->size());
+			debug("%s \n", "Beginning to read all requests from Database");
 
-			for (itDBRequest = db_requests->begin(); itDBRequest != db_requests->end(); itDBRequest++) {
+			db_requests = vdc_db.readAllVDCRequestsClassFromDataBase(&subNetwork);
+			debug("Successfully read %lu requests from DB.", db_requests->size());
+
+			for (it_db_requests = db_requests->begin(); it_db_requests != db_requests->end(); it_db_requests++) {
 				// debug print
-				debug("%s \n","Found a relevant request:");
-				(*itDBRequest)->DisplayRequest();
+				debug("Found a relevant request: \n");
+				(*it_db_requests)->DisplayRequest();
 
 				// new user
-				debug("%s: %d\n","creating new user", user_id);
+				debug("%s: %d\n", "creating new user", user_id);
 				user.SetId(user_id++);
 				user.SetSession("v2gvna14098bvdjtcpo7njh5t2"); // session ID copied from a testrun
 				users.push_back(user);
 				debug("Current Embedding:\n");
 				subNetwork.DisplaySubstrateEmbedding();
 
+				/*
+				//since it_db_requests is now filled with correct requests , we no longer do mapping
 				//let's select the best mapping option among four possible ones
-				Mapping_trial mapp1(*itDBRequest, 1);
+				Mapping_trial mapp1(*it_db_requests, 1);
 				mapp1.Mapp(&subNetwork);
 				mapp1.FreeMapp(&subNetwork);
-				Mapping_trial mapp2(*itDBRequest, 2);
+				Mapping_trial mapp2(*it_db_requests, 2);
 				mapp2.Mapp(&subNetwork);
 				mapp2.FreeMapp(&subNetwork);
-				Mapping_trial mapp3(*itDBRequest, 3);
+				Mapping_trial mapp3(*it_db_requests, 3);
 				mapp3.Mapp(&subNetwork);
 				mapp3.FreeMapp(&subNetwork);
-				Mapping_trial mapp4(*itDBRequest, 4);
+				Mapping_trial mapp4(*it_db_requests, 4);
 				mapp4.Mapp(&subNetwork);
 				mapp4.FreeMapp(&subNetwork);
-				if ((mapp1.GetStateMapping() == STATE_MAP_NODE_FAIL
-							|| mapp1.GetStateMapping() == STATE_MAP_LINK_FAIL)
-						&& (mapp2.GetStateMapping() == STATE_MAP_NODE_FAIL
-							|| mapp2.GetStateMapping() == STATE_MAP_LINK_FAIL)
-						&& (mapp3.GetStateMapping() == STATE_MAP_NODE_FAIL
-							|| mapp3.GetStateMapping() == STATE_MAP_LINK_FAIL)
-						&& (mapp4.GetStateMapping() == STATE_MAP_NODE_FAIL
-							|| mapp4.GetStateMapping() == STATE_MAP_LINK_FAIL)) {
+				if ((mapp1.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp1.GetStateMapping() == STATE_MAP_LINK_FAIL)
+						&& (mapp2.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp2.GetStateMapping() == STATE_MAP_LINK_FAIL)
+						&& (mapp3.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp3.GetStateMapping() == STATE_MAP_LINK_FAIL)
+						&& (mapp4.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp4.GetStateMapping() == STATE_MAP_LINK_FAIL)) {
 					//the mapping was not possible we put let the request wait
-					debug("%s \n","Mapping from database read request not possible.");
-					user.GetWaitingRequests()->push_back(**itDBRequest);
+					debug("%s \n", "Mapping from database read request not possible.");
+					user.GetWaitingRequests()->push_back(**it_db_requests);
 					pthread_t t1;
 					struct arg_struct2 args;
 					args.user = &user;
-					args.req = *itDBRequest; //we have to pass the user request otherwise we are jus passing a copy of it
+					args.req = *it_db_requests; //we have to pass the user request otherwise we are jus passing a copy of it
 					pthread_create(&t1, 0, function2, (void *) &args); // create a thread running function1
 					//sprintf(response, "MAP_FAIL&");
 					//send(csock, response, sizeof(response), 0);
 				} else {
-					debug("%s \n","Mapping from database read request is possible.");
-					mapping mapp = mapping(*itDBRequest);
-					debug("%s \n","Mapping achieved.");
+					debug("%s \n", "Mapping from database read request is possible.");
+					mapping mapp = mapping(*it_db_requests);
+					debug("%s \n", "Mapping achieved.");
 					//We try to sellect the best mapping among trials
-					double tempAvai = abs(mapp1.GetAvailability() - (*itDBRequest)->GetAvailability());
+					double tempAvai = abs(mapp1.GetAvailability() - (*it_db_requests)->GetAvailability());
 					Mapping_trial * best = &mapp1;
 					debug("%s \n", "mapp1 is the temporarily selected best mapping");
-					if (tempAvai > abs(mapp2.GetAvailability() - (*itDBRequest)->GetAvailability())) {
-						tempAvai = abs(mapp2.GetAvailability() - (*itDBRequest)->GetAvailability());
+					if (tempAvai > abs(mapp2.GetAvailability() - (*it_db_requests)->GetAvailability())) {
+						tempAvai = abs(mapp2.GetAvailability() - (*it_db_requests)->GetAvailability());
 						best = &mapp2;
 						debug("%s \n", "mapp2 is the best mapping");
 					}
-					if (tempAvai > abs(mapp3.GetAvailability() - (*itDBRequest)->GetAvailability())) {
-						tempAvai = abs(mapp3.GetAvailability() - (*itDBRequest)->GetAvailability());
+					if (tempAvai > abs(mapp3.GetAvailability() - (*it_db_requests)->GetAvailability())) {
+						tempAvai = abs(mapp3.GetAvailability() - (*it_db_requests)->GetAvailability());
 						best = &mapp3;
 						debug("%s \n", "mapp3 is the best mapping");
 					}
-					if (tempAvai > abs(	mapp4.GetAvailability()	- (*itDBRequest)->GetAvailability())) {
-						tempAvai = abs(mapp4.GetAvailability() - (*itDBRequest)->GetAvailability());
+					if (tempAvai > abs(mapp4.GetAvailability() - (*it_db_requests)->GetAvailability())) {
+						tempAvai = abs(mapp4.GetAvailability() - (*it_db_requests)->GetAvailability());
 						best = &mapp4;
 						debug("%s \n", "mapp4 is the best mapping");
 					}
-					debug("%s \n","Selecting Best Mapping.");
+					debug("%s \n", "Selecting Best Mapping.");
 					best->displayMapp();
-					mapp.ApplyBestMapping(best->GetNodeMapp(),
-							best->GetPathMapp(),
-							best->GetPathLength(), &subNetwork);
-					debug("%s \n","Assigning Best Mapping.");
-					(*itDBRequest)->SetMapping(&mapp);
+					mapp.ApplyBestMapping(best->GetNodeMapp(), best->GetPathMapp(), best->GetPathLength(), &subNetwork);
+					debug("%s \n", "Assigning Best Mapping.");
+					(*it_db_requests)->SetMapping(&mapp);
 					debug("Resulting Embedding:\n");
 					subNetwork.DisplaySubstrateEmbedding();
-					cout	<< "The resulting availability of the best mapping is : "
-							<< (*itDBRequest)->GetMapping()->GetAvailability()
-							<< " while the required availability is : "
-							<< (*itDBRequest)->GetAvailability() << "\n";
+					cout << "The resulting availability of the best mapping is : "
+							<< (*it_db_requests)->GetMapping()->GetAvailability() << " while the required availability is : "
+							<< (*it_db_requests)->GetAvailability() << "\n";
 
-					sprintf(response, "MAP_DONE&%f&",
-							(*itDBRequest)->GetMapping()->GetAvailability());
-					user.GetRequests()->push_back(**itDBRequest);
+					sprintf(response, "MAP_DONE&%f&", (*it_db_requests)->GetMapping()->GetAvailability());
+*/
+					user.GetRequests()->push_back(**it_db_requests);
 					pthread_t t1;
 					struct arg_struct args;
 					args.net = &subNetwork;
-					args.req = user.GetRequestById(
-							(*itDBRequest)->GetRequestNumber()); //we have to pass the user request otherwise we are jus passing a copy of it
-					pthread_create(&t1, 0, function1,
-							(void *) &args); // create a thread running function1
+					args.req = user.GetRequestById((*it_db_requests)->GetRequestNumber()); //we have to pass the user request otherwise we are jus passing a copy of it
+					pthread_create(&t1, 0, function1, (void *) &args); // create a thread running function1
+					 // ^^ TODO: since it(^) is to keep track of time of vdc, we need to update the time alive of request, as it was cut off some wherein between.
+					// TODO also need to differentiate between RUNNING and ABORTED vdcs
 					//send(csock, response, sizeof(response), 0);
-				}
+//				}
 				idRequest++;
 			}
-		}
-		else { // Else create a new DB that will be populated when a new request comes in
+		} else { // Else create a new DB that will be populated when a new request comes in
 			// debug print
-			debug("%s \n","NO database found, Creating a new DB");
+			debug("NO database found, Creating a new DB. \n");
 			ret_val = vdc_db.createDataBase();
-			if (ret_val == EXIT_SUCCESS) debug("%s \n","SUCCESS in Creating a new DB");
-			else  debug("%s \n","FAILURE while Creating a new DB");
+			if (ret_val == EXIT_SUCCESS)
+				debug("SUCCESS in Creating a new DB");
+			else
+				debug("FAILURE while Creating a new DB");
 		}
 
 		// Socket creation
@@ -298,9 +294,7 @@ int main() {
 						cout << "Waiting for a new request ...\n";
 						csock = accept(sock, (SOCKADDR*) &csin, &crecsize);
 						//New session has been opened let's create a User intance
-						cout << "Request received from "
-								<< inet_ntoa(csin.sin_addr) << " : "
-								<< htons(csin.sin_port) << "\n";
+						cout << "Request received from " << inet_ntoa(csin.sin_addr) << " : " << htons(csin.sin_port) << "\n";
 
 						recv(csock, buffer, sizeof(buffer), 0);
 						//cout << buffer << endl;
@@ -310,7 +304,7 @@ int main() {
 						if (!existsBySession(&users, session)) {
 							user.SetId(csock);
 							user.SetSession(session);
-							cout << "creation of a new user : session id = "<< session << "\n";
+							cout << "creation of a new user : session id = " << session << "\n";
 							users.push_back(user);
 						} else {
 							user = *(getUserBySession(&users, session));
@@ -329,11 +323,14 @@ int main() {
 							//for testing-----------
 							request.DisplayRequest();
 							// write request to DB
-							debug("%s \n","write new request to DB");
-							ret_val = vdc_db.writeVDCRequestToDataBase(&request);
-							if (ret_val == EXIT_SUCCESS) debug("%s \n","SUCCESS in writing new request to DB");
-							else debug("%s \n","FAILURE in writing new request to DB");
-							//for testing
+							/*
+							 debug("%s \n","write new request to DB");
+							 ret_val = vdc_db.writeVDCRequestToDataBase(&request);
+							 if (ret_val == EXIT_SUCCESS)
+							 debug("%s \n", "SUCCESS in writing new request to DB");
+							 else
+							 debug("%s \n", "FAILURE in writing new request to DB");
+							 */
 							debug("Current Embedding:\n");
 							subNetwork.DisplaySubstrateEmbedding();
 							//let's select the best mapping option among four possible ones
@@ -360,21 +357,10 @@ int main() {
 							//for testing-----------subNetwork.DisplaySubstrateEmbedding();
 
 							//for testing-----------cout<<"The resulting availability of mapping 4 is : "<<mapp4.GetAvailability()<<"\n";
-							if ((mapp1.GetStateMapping() == STATE_MAP_NODE_FAIL
-									|| mapp1.GetStateMapping()
-											== STATE_MAP_LINK_FAIL)
-									&& (mapp2.GetStateMapping()
-											== STATE_MAP_NODE_FAIL
-											|| mapp2.GetStateMapping()
-													== STATE_MAP_LINK_FAIL)
-									&& (mapp3.GetStateMapping()
-											== STATE_MAP_NODE_FAIL
-											|| mapp3.GetStateMapping()
-													== STATE_MAP_LINK_FAIL)
-									&& (mapp4.GetStateMapping()
-											== STATE_MAP_NODE_FAIL
-											|| mapp4.GetStateMapping()
-													== STATE_MAP_LINK_FAIL)) {
+							if ((mapp1.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp1.GetStateMapping() == STATE_MAP_LINK_FAIL)
+									&& (mapp2.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp2.GetStateMapping() == STATE_MAP_LINK_FAIL)
+									&& (mapp3.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp3.GetStateMapping() == STATE_MAP_LINK_FAIL)
+									&& (mapp4.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp4.GetStateMapping() == STATE_MAP_LINK_FAIL)) {
 								//the mapping was not possible we put let the request wait
 								user.GetWaitingRequests()->push_back(request);
 								idRequest++;
@@ -382,57 +368,34 @@ int main() {
 								struct arg_struct2 args;
 								args.user = &user;
 								args.req = &request; //we have to pass the user request otherwise we are jus passing a copy of it
-								pthread_create(&t1, 0, function2,
-										(void *) &args); // create a thread running function1
+								pthread_create(&t1, 0, function2, (void *) &args); // create a thread running function1
 								sprintf(response, "MAP_FAIL&");
 								send(csock, response, sizeof(response), 0);
 							} else {
 								mapping mapp = mapping(&request);
-								//We try to sellect the best mapping among trials
-								double tempAvai = abs(
-										mapp1.GetAvailability()
-												- request.GetAvailability());
+								//We try to select the best mapping among trials
+								double tempAvai = abs(mapp1.GetAvailability() - request.GetAvailability());
 								Mapping_trial * best = &mapp1;
 								debug("%s \n", "mapp1 is the default best mapping");
-								if (tempAvai
-										> abs(
-												mapp2.GetAvailability()
-														- request.GetAvailability())) {
-									tempAvai =
-											abs(
-													mapp2.GetAvailability()
-															- request.GetAvailability());
+								if (tempAvai > abs(mapp2.GetAvailability() - request.GetAvailability())) {
+									tempAvai = abs(mapp2.GetAvailability() - request.GetAvailability());
 									best = &mapp2;
 									debug("%s \n", "mapp2 is the best mapping");
 								}
-								if (tempAvai
-										> abs(
-												mapp3.GetAvailability()
-														- request.GetAvailability())) {
-									tempAvai =
-											abs(
-													mapp3.GetAvailability()
-															- request.GetAvailability());
+								if (tempAvai > abs(mapp3.GetAvailability() - request.GetAvailability())) {
+									tempAvai = abs(mapp3.GetAvailability() - request.GetAvailability());
 									best = &mapp3;
 									debug("%s \n", "mapp3 is the best mapping");
 								}
-								if (tempAvai
-										> abs(
-												mapp4.GetAvailability()
-														- request.GetAvailability())) {
-									tempAvai =
-											abs(
-													mapp4.GetAvailability()
-															- request.GetAvailability());
+								if (tempAvai > abs(mapp4.GetAvailability() - request.GetAvailability())) {
+									tempAvai = abs(mapp4.GetAvailability() - request.GetAvailability());
 									best = &mapp4;
 									debug("%s \n", "mapp4 is the best mapping");
 								}
 								best->displayMapp();
 								//-----------------------------------------------
 								//for testing-----------cout<<"The resulting availability of the best mapping is : "<<best->GetAvailability()<<" while the required availability is : "<<request.GetAvailability()<<"\n";
-								mapp.ApplyBestMapping(best->GetNodeMapp(),
-										best->GetPathMapp(),
-										best->GetPathLength(), &subNetwork);
+								mapp.ApplyBestMapping(best->GetNodeMapp(), best->GetPathMapp(), best->GetPathLength(), &subNetwork);
 								//for testing-----------cout<<"The availability mapp is : "<<mapp.GetAvailability()<<"\n";
 								request.SetMapping(&mapp);
 								//for testing
@@ -441,14 +404,11 @@ int main() {
 
 								debug("Resulting Embedding:\n");
 								subNetwork.DisplaySubstrateEmbedding();
-								cout
-										<< "The resulting availability of the best mapping is : "
-										<< request.GetMapping()->GetAvailability()
-										<< " while the required availability is : "
+								cout << "The resulting availability of the best mapping is : "
+										<< request.GetMapping()->GetAvailability() << " while the required availability is : "
 										<< request.GetAvailability() << "\n";
 								idRequest++;
-								sprintf(response, "MAP_DONE&%f&",
-										request.GetMapping()->GetAvailability());
+								sprintf(response, "MAP_DONE&%f&", request.GetMapping()->GetAvailability());
 								//for testing-----------subNetwork.DisplaySubstrateEmbedding();
 								//for testing-----------cout << " DISPLAY BEFORE PUSH BACK" << endl;
 								//for testing-----------request.DisplayRequest();
@@ -461,10 +421,16 @@ int main() {
 								pthread_t t1;
 								struct arg_struct args;
 								args.net = &subNetwork;
-								args.req = user.GetRequestById(
-										request.GetRequestNumber()); //we have to pass the user request otherwise we are jus passing a copy of it
-								pthread_create(&t1, 0, function1,
-										(void *) &args); // create a thread running function1
+								args.req = user.GetRequestById(request.GetRequestNumber()); //we have to pass the user request otherwise we are jus passing a copy of it
+								pthread_create(&t1, 0, function1, (void *) &args); // create a thread running function1
+
+								// write request to DB
+								debug("write new request to DB");
+								ret_val = vdc_db.writeVDCRequestToDataBase(&request);
+								if (ret_val == EXIT_SUCCESS)
+									debug("SUCCESS in writing new request to DB");
+								else
+									debug("FAILURE in writing new request to DB");
 
 								send(csock, response, sizeof(response), 0);
 							}
@@ -477,21 +443,18 @@ int main() {
 								if (!user.GetRequests()->empty()) {
 									//for testing-----------
 
-									sprintf(response, "%s&%d", response,
-											user.GetRequests()->size());
+									sprintf(response, "%s&%d", response, user.GetRequests()->size());
 									int idRequest;
-									std::list<Request>::iterator it1 =
-											user.GetRequests()->begin();
+									std::list<Request>::iterator it1 = user.GetRequests()->begin();
 									//std::list<Request>::iterator it1 =
 									user.GetRequests()->begin();
 									pthread_mutex_t mutex =
-											PTHREAD_MUTEX_INITIALIZER;
+									PTHREAD_MUTEX_INITIALIZER;
 									pthread_mutex_lock(&mutex);
 									while (it1 != user.GetRequests()->end()) {
 										(it1)->CalculateStatus();
 										//cout<<" here "<<endl;
-										int reqNumber =
-												(it1)->GetRequestNumber();
+										int reqNumber = (it1)->GetRequestNumber();
 										//cout<<" here "<<endl;
 										int nbNodes = (it1)->GetNumberNodes();
 										//cout<<" here "<<endl;
@@ -499,8 +462,7 @@ int main() {
 										//cout<<" here "<<endl;
 										double duration = (it1)->GetDuration();
 										//cout<<" here "<<endl;
-										double avai =
-												(it1)->GetMapping()->GetAvailability();
+										double avai = (it1)->GetMapping()->GetAvailability();
 										//cout<<" here "<<endl;
 										int status = (it1)->GetStatus();
 
@@ -510,35 +472,23 @@ int main() {
 
 										time_t now = time(0);
 										//tstruct_tmp = *localtime(&arrTime);
-										strftime(buf_tm_tmp, sizeof(buf_tm_tmp),
-												"%Y-%m-%d.%X",
-												localtime(&arrTime));
+										strftime(buf_tm_tmp, sizeof(buf_tm_tmp), "%Y-%m-%d.%X", localtime(&arrTime));
 										cout << buf_tm_tmp << endl;
 										double remainTime;
-										if (status == STATE_EXPIRED
-												|| status == STATE_ABORTED) {
+										if (status == STATE_EXPIRED || status == STATE_ABORTED) {
 											remainTime = 0;
 										} else {
 											if (status == STATE_WAITING) {
-												remainTime =
-														(it1)->GetDuration();
+												remainTime = (it1)->GetDuration();
 											} else {
-												remainTime =
-														(it1)->GetDuration()
-																- difftime(now,
-																		(it1)->GetArrTime());
+												remainTime = (it1)->GetDuration() - difftime(now, (it1)->GetArrTime());
 											}
 										}
 
 										//cout<<" here "<<endl;
 										//for testing-----------it1->DisplayRequest();
-										sprintf(response,
-												"%s&%d&%s&%d&%d&%lf&%lf&%d&%s&%lf",
-												response, reqNumber,
-												(it1)->GetUserName().c_str(),
-												nbNodes, nbLinks, duration,
-												avai, status, buf_tm_tmp,
-												remainTime);
+										sprintf(response, "%s&%d&%s&%d&%d&%lf&%lf&%d&%s&%lf", response, reqNumber,
+												(it1)->GetUserName().c_str(), nbNodes, nbLinks, duration, avai, status, buf_tm_tmp, remainTime);
 										it1++;
 									}
 
@@ -554,33 +504,31 @@ int main() {
 								if (!strcmp(action, "dltvdc")) {
 									char * charId = strtok(NULL, "&,");
 									int id = atoi(charId);
-									cout << " asking to delete VDC with id "
-											<< id << endl;
+									cout << " asking to delete VDC with id " << id << endl;
 									//cout <<" user status : "<< user.GetRequestById(id)->GetStatus() << endl;
-									if (user.GetRequestById(id)->GetStatus()==STATE_RUNNING) {
+									if (user.GetRequestById(id)->GetStatus() == STATE_RUNNING) {
 										pthread_mutex_t mutex =
-												PTHREAD_MUTEX_INITIALIZER;
+										PTHREAD_MUTEX_INITIALIZER;
 										pthread_mutex_lock(&mutex);
 										//for testing-----------subNetwork.DisplaySubstrateEmbedding();
-										user.GetRequestById(id)->FreeMapping(
-												&subNetwork);
+										user.GetRequestById(id)->FreeMapping(&subNetwork);
 										//for testing-----------subNetwork.DisplaySubstrateEmbedding();
 										user.GetRequestById(id)->SetStatus(
-												STATE_ABORTED);
+										STATE_ABORTED);
 										//user.GetRequestById(id)->GetMapping()->displayMapp();
 										pthread_mutex_unlock(&mutex);
-										sprintf(response, "%s&%d", "RMV_DONE",
-												id);
+										sprintf(response, "%s&%d", "RMV_DONE", id);
 
 										// Delete VDC Request from Database
-										debug("%s \n","remove a request from DB");
+										debug("remove a request from DB");
 										ret_val = vdc_db.removeVDCRequestFromDataBase(user.GetRequestById(id), double(time(0)));
-										if (ret_val == EXIT_SUCCESS) debug("%s \n","SUCCESS in removing request from DB");
-										else debug("%s \n","FAILURE in removing request from DB");
+										if (ret_val == EXIT_SUCCESS)
+											debug("%s \n", "SUCCESS in removing request from DB.");
+										else
+											debug("%s \n", "FAILURE in removing request from DB.");
 
 									} else {
-										sprintf(response, "%s&%d", "RMV_FAILED",
-												id);
+										sprintf(response, "%s&%d", "RMV_FAILED", id);
 									}
 
 									send(csock, response, sizeof(response), 0);
@@ -588,202 +536,112 @@ int main() {
 									if (!strcmp(action, "vdcdetails")) {
 										char * charId = strtok(NULL, "&,");
 										int id = atoi(charId);
-										cout
-												<< " asking to get the details of VDC with id "
-												<< id << endl;
+										cout << " asking to get the details of VDC with id " << id << endl;
 										//cout <<" user status : "<< user.GetRequestById(id)->GetStatus() << endl;
 										Request * vdc = user.GetRequestById(id);
 										pthread_mutex_t mutex =
-												PTHREAD_MUTEX_INITIALIZER;
+										PTHREAD_MUTEX_INITIALIZER;
 										pthread_mutex_lock(&mutex);
 										//for testing-----------cout<< " DISPLAY REQUEST @ BEG OF DETAILS VDC"<< endl;
 										//user.GetRequestById(0)->DisplayRequest();
 										//vdc->DisplayRequest();
 										vdc->CalculateStatus();
-										sprintf(response, "%s&%d&%s&%d&%d",
-												"VDC_FOUND",
-												vdc->GetRequestNumber(),
-												vdc->GetUserName().c_str(),
-												vdc->GetNumberNodes(),
-												vdc->GetLinks()->size());
+										sprintf(response, "%s&%d&%s&%d&%d", "VDC_FOUND", vdc->GetRequestNumber(),
+												vdc->GetUserName().c_str(), vdc->GetNumberNodes(), vdc->GetLinks()->size());
 										std::list<Priority_group>::iterator it2;
 										std::list<Virtual_node>::iterator it3;
 										std::list<Path>::iterator it4;
-										for (it2 = vdc->GetGroups()->begin();
-												it2 != vdc->GetGroups()->end();
-												it2++) {
-											for (it3 = it2->GetNodes()->begin();
-													it3
-															!= it2->GetNodes()->end();
-													it3++) {
-												sprintf(response,
-														"%s&%d&%d&%s&%s&%s&%s",
-														response, it3->GetId(),
-														it3->GetFlavor(),
-														it3->GetStatus().c_str(),
-														it3->GetEmbeddingNode_name().c_str(),
-														it3->GetPrivateIp().c_str(),
+										for (it2 = vdc->GetGroups()->begin(); it2 != vdc->GetGroups()->end(); it2++) {
+											for (it3 = it2->GetNodes()->begin(); it3 != it2->GetNodes()->end(); it3++) {
+												sprintf(response, "%s&%d&%d&%s&%s&%s&%s", response, it3->GetId(), it3->GetFlavor(),
+														it3->GetStatus().c_str(), it3->GetEmbeddingNode_name().c_str(), it3->GetPrivateIp().c_str(),
 														it3->GetPublicIp().c_str());
 											}
 										}
 
-										for (it4 = vdc->GetLinks()->begin();
-												it4 != vdc->GetLinks()->end();
-												it4++) {
+										for (it4 = vdc->GetLinks()->begin(); it4 != vdc->GetLinks()->end(); it4++) {
 											int id = it4->GetId();
-											int from_id =
-													it4->GetSourceNode_id();
-											int to_id =
-													it4->GetDestinationNode_id();
+											int from_id = it4->GetSourceNode_id();
+											int to_id = it4->GetDestinationNode_id();
 											double bw = it4->GetBandwidth();
 											//for testing -----printf("%d  %d  %d  %lf\n",id,from_id,to_id,bw);
-											sprintf(response,
-													"%s&%d&%d&%d&%lf&%s",
-													response, id, from_id,
-													to_id, bw,
+											sprintf(response, "%s&%d&%d&%d&%lf&%s", response, id, from_id, to_id, bw,
 													it4->GetStatus().c_str());
 										}
-										sprintf(response, "%s&%d&%d&%d&%lf&",
-												response);
+										sprintf(response, "%s&%d&%d&%d&%lf&", response);
 										//printf("%s\n", response);
 										pthread_mutex_unlock(&mutex);
 
-										send(csock, response, sizeof(response),
-												0);
+										send(csock, response, sizeof(response), 0);
 									} else {
 										if (!strcmp(action, "subdetails")) {
-											cout
-													<< " asking to get the details of substrate network "
-													<< endl;
+											cout << " asking to get the details of substrate network " << endl;
 											std::list<Sub_node_type>::iterator it1;
 											std::list<Substrate_node>::iterator it2;
 											std::list<Substrate_link>::iterator it3;
 											pthread_mutex_t mutex =
-													PTHREAD_MUTEX_INITIALIZER;
+											PTHREAD_MUTEX_INITIALIZER;
 											pthread_mutex_lock(&mutex);
-											sprintf(response2, "%d&%d&%d",
-													subNetwork.GetId(),
-													subNetwork.GetNumberNodes(),
+											sprintf(response2, "%d&%d&%d", subNetwork.GetId(), subNetwork.GetNumberNodes(),
 													subNetwork.GetSubstrateLinks()->size());
-											for (it1 =
-													subNetwork.GetTypes()->begin();
-													it1
-															!= subNetwork.GetTypes()->end();
-													it1++) {
-												for (it2 =
-														it1->GetSubstrateNodes()->begin();
-														it2
-																!= it1->GetSubstrateNodes()->end();
-														it2++) {
-													sprintf(response2,
-															"%s&%s&%d&%lf&%lf&%lf&%lf&%lf&%lf&%d&%lf&%s",
-															response2,
-															it2->GetName().c_str(),
-															it2->GetType(),
-															it2->GetCpu(),
-															it2->GetUsedCpu(),
-															it2->GetMemory(),
-															it2->GetUsedMemory(),
-															it2->GetDisk(),
-															it2->GetUsedDisk(),
-															it2->GetEmbeddedNodes()->size(),
-															it2->GetAvailability(),
-															"State_node");
+											for (it1 = subNetwork.GetTypes()->begin(); it1 != subNetwork.GetTypes()->end(); it1++) {
+												for (it2 = it1->GetSubstrateNodes()->begin(); it2 != it1->GetSubstrateNodes()->end(); it2++) {
+													sprintf(response2, "%s&%s&%d&%lf&%lf&%lf&%lf&%lf&%lf&%d&%lf&%s", response2,
+															it2->GetName().c_str(), it2->GetType(), it2->GetCpu(), it2->GetUsedCpu(),
+															it2->GetMemory(), it2->GetUsedMemory(), it2->GetDisk(), it2->GetUsedDisk(),
+															it2->GetEmbeddedNodes()->size(), it2->GetAvailability(), "State_node");
 												}
 											}
-											for (it3 =
-													subNetwork.GetSubstrateLinks()->begin();
-													it3
-															!= subNetwork.GetSubstrateLinks()->end();
+											for (it3 = subNetwork.GetSubstrateLinks()->begin(); it3 != subNetwork.GetSubstrateLinks()->end();
 													it3++) {
-												sprintf(response2,
-														"%s&%d&%s&%s&%lf&%lf",
-														response2, it3->GetId(),
-														it3->GetSourceNode()->GetName().c_str(),
-														it3->GetDestinationNode()->GetName().c_str(),
-														it3->GetBandwidth(),
-														it3->GetUsedBandwidth());
+												sprintf(response2, "%s&%d&%s&%s&%lf&%lf", response2, it3->GetId(),
+														it3->GetSourceNode()->GetName().c_str(), it3->GetDestinationNode()->GetName().c_str(),
+														it3->GetBandwidth(), it3->GetUsedBandwidth());
 
 											}
 											pthread_mutex_unlock(&mutex);
-											sprintf(response2, "%s&",
-													response2);
+											sprintf(response2, "%s&", response2);
 											printf("%s\n", response2);
-											send(csock, response2,
-													sizeof(response2), 0);
+											send(csock, response2, sizeof(response2), 0);
 										} else {
-											if (!strcmp(action,
-													"lastvdcdetails")) {
+											if (!strcmp(action, "lastvdcdetails")) {
 												printf("*** here *****\n");
 												//cout <<" user status : "<< user.GetRequestById(id)->GetStatus() << endl;
-												Request * vdc =
-														user.GetRequestById(
-																user.GetRequests()->size()
-																		- 1);
+												Request * vdc = user.GetRequestById(user.GetRequests()->size() - 1);
 												pthread_mutex_t mutex =
-																		PTHREAD_MUTEX_INITIALIZER;
+												PTHREAD_MUTEX_INITIALIZER;
 												pthread_mutex_lock(&mutex);
 												//for testing-----------cout<< " DISPLAY REQUEST @ BEG OF DETAILS VDC"<< endl;
 												//user.GetRequestById(0)->DisplayRequest();
 												//vdc->DisplayRequest();
 												//vdc->CalculateStatus();
-												sprintf(response, "%s&%d&%d&%d",
-														"VDC_FOUND",
-														vdc->GetRequestNumber(),
-														vdc->GetNumberNodes(),
+												sprintf(response, "%s&%d&%d&%d", "VDC_FOUND", vdc->GetRequestNumber(), vdc->GetNumberNodes(),
 														vdc->GetLinks()->size());
 												std::list<Priority_group>::iterator it2;
 												std::list<Virtual_node>::iterator it3;
 												std::list<Path>::iterator it4;
-												for (it2 =
-														vdc->GetGroups()->begin();
-														it2
-																!= vdc->GetGroups()->end();
-														it2++) {
-													for (it3 =
-															it2->GetNodes()->begin();
-															it3
-																	!= it2->GetNodes()->end();
-															it3++) {
-														sprintf(response,
-																"%s&%d&%d&%s&%s&%s&%s",
-																response,
-																it3->GetId(),
-																it3->GetFlavor(),
-																it3->GetStatus().c_str(),
-																it3->GetEmbeddingNode_name().c_str(),
-																it3->GetPrivateIp().c_str(),
-																it3->GetPublicIp().c_str());
+												for (it2 = vdc->GetGroups()->begin(); it2 != vdc->GetGroups()->end(); it2++) {
+													for (it3 = it2->GetNodes()->begin(); it3 != it2->GetNodes()->end(); it3++) {
+														sprintf(response, "%s&%d&%d&%s&%s&%s&%s", response, it3->GetId(), it3->GetFlavor(),
+																it3->GetStatus().c_str(), it3->GetEmbeddingNode_name().c_str(),
+																it3->GetPrivateIp().c_str(), it3->GetPublicIp().c_str());
 													}
 												}
 
-												for (it4 =
-														vdc->GetLinks()->begin();
-														it4
-																!= vdc->GetLinks()->end();
-														it4++) {
+												for (it4 = vdc->GetLinks()->begin(); it4 != vdc->GetLinks()->end(); it4++) {
 													int id = it4->GetId();
-													int from_id =
-															it4->GetSourceNode_id();
-													int to_id =
-															it4->GetDestinationNode_id();
-													double bw =
-															it4->GetBandwidth();
+													int from_id = it4->GetSourceNode_id();
+													int to_id = it4->GetDestinationNode_id();
+													double bw = it4->GetBandwidth();
 													//for testing -----printf("%d  %d  %d  %lf\n",id,from_id,to_id,bw);
-													sprintf(response,
-															"%s&%d&%d&%d&%lf&%s",
-															response, id,
-															from_id, to_id, bw,
+													sprintf(response, "%s&%d&%d&%d&%lf&%s", response, id, from_id, to_id, bw,
 															it4->GetStatus().c_str());
 												}
-												sprintf(response,
-														"%s&%d&%d&%d&%lf&",
-														response);
+												sprintf(response, "%s&%d&%d&%d&%lf&", response);
 												//printf("%s\n", response);
 												pthread_mutex_unlock(&mutex);
 
-												send(csock, response,
-														sizeof(response), 0);
+												send(csock, response, sizeof(response), 0);
 											} else {
 												cout << "??";
 											}

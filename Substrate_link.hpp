@@ -21,7 +21,7 @@
 class Substrate_link : public Link {
 public:
 	Substrate_link();
-	Substrate_link(int,Substrate_node *,Substrate_node *,double,double);
+	Substrate_link(int id, Substrate_node * from, Substrate_node * to, double bw, double avai);
 	void SetAvailability(double);
 	double GetAvailability();
 	Substrate_node * GetSourceNode();
@@ -29,7 +29,7 @@ public:
 	Substrate_node * GetDestinationNode();
 	int GetDestinationNode_id();
 	std::list<class Path>* GetEmbeddedPaths();
-	bool removeEmbeddedPath( Path *);
+	bool removeEmbeddedPath(Path*);
 	void DisplayEmdeddedPaths();
     double GetUsedBandwidth();
 	double GetRestBandwidth();

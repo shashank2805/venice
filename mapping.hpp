@@ -18,7 +18,10 @@
 class mapping {
 public:
 	mapping(class Request*);
+	int GetId(void);
+	void SetId(int id);
 	double GetAvailability();
+	void SetAvailability(double availability);
 	int GetStateMapping();
 	void SetStateMapping(int);
 	double GetMapTime();

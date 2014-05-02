@@ -9,38 +9,37 @@
 //
 //
 
-
 #include "mapping.hpp"
 #include "Substrate_network.hpp"
 
-mapping::mapping(Request* req){
-	this->stateMapping=STATE_NEW;
-	this->request=req;
+mapping::mapping(Request* req) {
+	this->stateMapping = STATE_NEW;
+	this->request = req;
 }
 
-void mapping::ApplyBestMapping(int * nodes,std::list<int> * path_mapp,int * path_length,Substrate_network* sub){
-	ApplyBestMappingNodes(nodes,sub);
-	ApplyBestMappingPaths(path_mapp,path_length,sub);
-	this->stateMapping=STATE_MAP_LINK;
-	this->availability=avaiMapp();
+void mapping::ApplyBestMapping(int * nodes, std::list<int> * path_mapp, int * path_length, Substrate_network* sub) {
+	debug("Applying Best Mapping...");
+	ApplyBestMappingNodes(nodes, sub);
+	ApplyBestMappingPaths(path_mapp, path_length, sub);
+	this->stateMapping = STATE_MAP_LINK;
+	this->availability = avaiMapp();
 	//-------------------------this->mapTime=now;------------------------------
 }
 
-void mapping::ApplyBestMappingNodes(int * tab,Substrate_network* sub){
-	
+void mapping::ApplyBestMappingNodes(int * tab, Substrate_network* sub) {
+
 	//variables
 	std::list<Priority_group>::iterator it1;
 	std::list<Virtual_node>::iterator it2;
-	int i =0;
+	int i = 0;
 
 	//operations
-	for (it1=this->request->GetGroups()->begin(); it1!=this->request->GetGroups()->end(); it1++)
-	{
-		for (it2=it1->GetNodes()->begin(); it2!=it1->GetNodes()->end(); it2++)
-		{
+	for (it1 = this->request->GetGroups()->begin(); it1 != this->request->GetGroups()->end(); it1++) {
+		for (it2 = it1->GetNodes()->begin(); it2 != it1->GetNodes()->end(); it2++) {
+			debug("For Virtual Node: %d, assigning Substrate Node: %d", i, tab[i]);
 			it2->SetEmbeddingNode(sub->GetNodeById(tab[i]));
-			Substrate_node* nd = sub->GetNodeById(tab[i]);
-			int idNode = tab[i];
+			//Substrate_node* nd = sub->GetNodeById(tab[i]);
+			//int idNode = tab[i];
 			it2->SetEmbeddingNode_name(sub->GetNodeById(tab[i])->GetName());
 			sub->GetNodeById(tab[i])->GetEmbeddedNodes()->push_back(*it2);
 			sub->GetNodeById(tab[i])->GetEmbeddedNodes_id()->push_back(it2->GetId());
@@ -49,42 +48,35 @@ void mapping::ApplyBestMappingNodes(int * tab,Substrate_network* sub){
 	}
 }
 
-void mapping::ApplyBestMappingPaths(std::list<int> * path_mapp,int * path_length,Substrate_network* sub){
-		
+void mapping::ApplyBestMappingPaths(std::list<int> * path_mapp, int * path_length, Substrate_network* sub) {
+
 	//variables
 	std::list<Path>::iterator it1;
 	std::list<int>::iterator it2;
-	Substrate_link* emddeingLink;
+	Substrate_link* embeddingLink;
 	int i;
 
 	//operations
-	for (it1=this->request->GetLinks()->begin(); it1!=this->request->GetLinks()->end(); it1++)
-	{
-		i=it1->GetId();
-		if(path_length[i]>0)
-		{
-			//for testing-----------cout<<" *** for Path with id : "<<i<<endl;
-			for (it2=path_mapp[i].begin(); it2!=path_mapp[i].end(); it2++)
-			{
-				emddeingLink=sub->GetLinkById(*it2);
-				//for testing-----------cout<<" * sub link with id : "<<emddeingLink->GetId()<<endl;
-				it1->GetSubstrateLinks()->push_back(*emddeingLink);
+	for (it1 = this->request->GetLinks()->begin(); it1 != this->request->GetLinks()->end(); it1++) {
+		i = it1->GetId(); //for path with id i (virtual link)
+		if (path_length[i] > 0) { // if path length is non zero
+			for (it2 = path_mapp[i].begin(); it2 != path_mapp[i].end(); it2++) { // see each element of that list as substrate link ID
+				embeddingLink = sub->GetLinkById(*it2); // get first substrate link using the substrate link id
+				debug("For Request Path with id: %d, assign Substrate Link with id: %d", i, embeddingLink->GetId());
+				it1->GetSubstrateLinks()->push_back(*embeddingLink); // shove it into the request=>Path=>substrateLinks list
 				// for id migration------it1->GetSubstrateLinks_id()->push_back(*it2);
-				emddeingLink->GetEmbeddedPaths()->push_back(*it1);
+				embeddingLink->GetEmbeddedPaths()->push_back(*it1); // push into the embeddingLink the pointer to the Path that we just pushed some stuff into
 				// for id migration------emddeingLink->GetEmbeddedPaths_id()->push_back(it1->GetId());
 			}
-			
 		}
-		
 	}
 }
 
-void mapping::displayMapp(){
+void mapping::displayMapp() {
 
 	std::list<Virtual_node>::iterator it1;
 
-	switch(this->stateMapping)
-	{
+	switch (this->stateMapping) {
 	case STATE_MAP_NODE:
 		debug("the stateMapping of the request of number: %d, is STATE_MAP_NODE\n", this->request->GetRequestNumber());
 		break;
@@ -106,7 +98,7 @@ void mapping::displayMapp(){
 
 }
 
-void mapping::displayMappNode(){
+void mapping::displayMappNode() {
 
 	//variables
 	std::list<Priority_group>::iterator it1;
@@ -115,78 +107,86 @@ void mapping::displayMappNode(){
 	std::list<Substrate_link>::iterator it4;
 
 	//operations
-	for (it1=this->request->GetGroups()->begin(); it1!=this->request->GetGroups()->end(); it1++) {
+	for (it1 = this->request->GetGroups()->begin(); it1 != this->request->GetGroups()->end(); it1++) {
 		debug("GroupID: %d\n", it1->GetId());
-		for (it2=it1->GetNodes()->begin(); it2!=it1->GetNodes()->end(); it2++) {
-			debug("NodeID: %d, Mapped to Substrate Node: %d, of Availability: %f\n",
-					it2->GetId(), it2->GetEmbeddingNode()->GetId(), it2->GetEmbeddingNode()->GetAvailability());
+		for (it2 = it1->GetNodes()->begin(); it2 != it1->GetNodes()->end(); it2++) {
+			debug("NodeID: %d, Mapped to Substrate Node: %d, of Availability: %f\n", it2->GetId(),
+					it2->GetEmbeddingNode()->GetId(), it2->GetEmbeddingNode()->GetAvailability());
 		}
 	}
 }
 
-void mapping::displayMappPath(){
+void mapping::displayMappPath() {
 
 	//variables
 	std::list<Path>::iterator it3;
 	std::list<Substrate_link>::iterator it4;
 
 	//operations
-	for (it3=this->request->GetLinks()->begin(); it3!=this->request->GetLinks()->end(); it3++) {
-		for (it4=it3->GetSubstrateLinks()->begin(); it4!=it3->GetSubstrateLinks()->end(); it4++) {
-			debug("LinkID: %d, Mapped to Substrate Link: %d, of Availability: %f\n",
-					it3->GetId(), it4->GetId(), it4->GetAvailability());
+	for (it3 = this->request->GetLinks()->begin(); it3 != this->request->GetLinks()->end(); it3++) {
+		for (it4 = it3->GetSubstrateLinks()->begin(); it4 != it3->GetSubstrateLinks()->end(); it4++) {
+			debug("LinkID: %d, Mapped to Substrate Link: %d, of Availability: %f\n", it3->GetId(), it4->GetId(),
+					it4->GetAvailability());
 		}
 	}
 }
 
-double mapping::avaiMapp(){
+double mapping::avaiMapp() {
 
-	double avai=1;
-	avai*=avaiMappNode();
-	avai*=avaiMappPath()/100;
+	double avai = 1;
+	avai *= avaiMappNode();
+	avai *= avaiMappPath() / 100;
 	return avai;
 }
 
-double mapping::avaiMappNode(){
+double mapping::avaiMappNode() {
 
 	//variables
 	std::list<Priority_group>::iterator it1;
 	std::list<Virtual_node>::iterator it2;
-	double avai=1;
+	double avai = 1;
 
 	//operations
-	for (it1=this->request->GetGroups()->begin(); it1!=this->request->GetGroups()->end(); it1++)
-	{
-		for (it2=it1->GetNodes()->begin(); it2!=it1->GetNodes()->end(); it2++)
-		{
-			avai*= (it2->GetEmbeddingNode()->GetAvailability())/100;
+	for (it1 = this->request->GetGroups()->begin(); it1 != this->request->GetGroups()->end(); it1++) {
+		for (it2 = it1->GetNodes()->begin(); it2 != it1->GetNodes()->end(); it2++) {
+			avai *= (it2->GetEmbeddingNode()->GetAvailability()) / 100;
 		}
 	}
-	avai*=100;
+	avai *= 100;
 	return avai;
 }
 
-double mapping::avaiMappPath(){
+double mapping::avaiMappPath() {
 
 	//variables
 	std::list<Path>::iterator it1;
 	std::list<Substrate_link>::iterator it2;
-	double avai=1;
+	double avai = 1;
 
 	//operations
-	for (it1=this->request->GetLinks()->begin(); it1!=this->request->GetLinks()->end(); it1++)
-	{
-		for (it2=it1->GetSubstrateLinks()->begin(); it2!=it1->GetSubstrateLinks()->end(); it2++)
-		{
-			avai*= (it2->GetAvailability())/100;
+	for (it1 = this->request->GetLinks()->begin(); it1 != this->request->GetLinks()->end(); it1++) {
+		for (it2 = it1->GetSubstrateLinks()->begin(); it2 != it1->GetSubstrateLinks()->end(); it2++) {
+			avai *= (it2->GetAvailability()) / 100;
 		}
 	}
-	avai*=100;
+	avai *= 100;
 	return avai;
 }
 
-double mapping::GetAvailability(){
+int mapping::GetId(void) {
+	return this->id;
+}
+
+void mapping::SetId(int id) {
+	this->id = id;
+}
+
+double mapping::GetAvailability() {
 	return this->availability;
+}
+
+void mapping::SetAvailability(double availability) {
+	this->availability = availability;
 }
 
 int mapping::GetStateMapping() {
@@ -194,7 +194,7 @@ int mapping::GetStateMapping() {
 }
 
 void mapping::SetStateMapping(int StateType) {
-	this->stateMapping=StateType;
+	this->stateMapping = StateType;
 }
 
 double mapping::GetMapTime() {
@@ -202,13 +202,13 @@ double mapping::GetMapTime() {
 }
 
 void mapping::SetMapTime(double mapTime) {
-	this->mapTime=mapTime;
+	this->mapTime = mapTime;
 }
 
-Request* mapping::GetRequest(){
+Request* mapping::GetRequest() {
 	return this->request;
 }
-	
-void mapping::SetRequest(Request* request){
-	this->request=request;
+
+void mapping::SetRequest(Request* request) {
+	this->request = request;
 }

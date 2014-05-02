@@ -355,7 +355,7 @@ void Request::FreeMapping(Substrate_network* sub) {
 		if (!it1->GetSubstrateLinks()->empty()) //this means it is not connecting two nodes hosted in the same physical node
 		{
 			//cout << " This path has " << it1->GetSubstrateLinks()->size() <<" sub links " <<endl;
-			Path * path = &(*it1);
+			Path* path = &(*it1);
 			it2 = it1->GetSubstrateLinks()->begin();
 			while (it2 != it1->GetSubstrateLinks()->end()) {
 				//it1 = it2->GetEmbeddedPaths()->erase(it1);
