@@ -75,10 +75,14 @@ public:
 	 * appropriate assignment of link and node pointers. */
 	vector<Request*>* readAllVDCRequestsClassFromDataBase(Substrate_network *subNetwork);
 
-	int removeVDCRequestFromDataBase(Request* request, double t);
+	/* Delete the entries in the Database that pertain to request ID identified by request->GetRequestNumber() */
+	int removeVDCRequestFromDataBase(Request* request, double t); // Not used
 
-	int writeSubstrateNetworkToDataBase(Substrate_network);
-	Substrate_network* readSubstrateNetworkFromDataBase();
+	/* Delete the node and link mapping, and change the status of request to 'STATE_ABORTED' */
+	int abortVDCRequestInDataBase(Request* request);
+
+	int writeSubstrateNetworkToDataBase(Substrate_network); // Not used
+	Substrate_network* readSubstrateNetworkFromDataBase();  // Not used
 
 };
 

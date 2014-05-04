@@ -503,7 +503,7 @@ int VDCPlannerMysqlConnector::writeVDCRequestToDataBase(Request* request) {
 			pstmt->setInt(5, 0); //No meaning for the partition in this case
 			pstmt->setInt(6, 0); //No meaning for the partition in this case
 			pstmt->setDouble(7, link.GetBandwidth());
-			pstmt->setDouble(8, 10000); // TODO: The delay is not mentioned in the Request, put a high value placeholder
+			pstmt->setDouble(8, 10000); // The delay is not mentioned in the Request, put a high value placeholder
 			pstmt->setString(9, link.GetStatus());
 			pstmt->setInt(10, link.GetLength());
 			pstmt->setString(11, link.GetName());
@@ -652,8 +652,8 @@ Request* VDCPlannerMysqlConnector::readVDCRequestClassFromDataBase(int idRequest
 					subNetwork->GetNodeById(res2->getInt("subsrateNodeID"))->GetEmbeddedNodes()->push_back(*vm);
 					subNetwork->GetNodeById(res2->getInt("subsrateNodeID"))->GetEmbeddedNodes_id()->push_back(
 							res2->getInt("VMID"));
-					listVMs->push_back(*vm);
 				}
+				listVMs->push_back(*vm);
 			}
 			Priority_group group = Priority_group(1); // always remain 1 for current implementation
 			group.SetId(1);
@@ -847,7 +847,6 @@ int VDCPlannerMysqlConnector::removeVDCRequestFromDataBase(Request* request, dou
 
 		/*
 		 * This part is optional, the triggers already remove the links and VMs that belong to the request (have the same requestID)
-		 *
 		 pstmt = con->prepareStatement("DELETE FROM virtual_links WHERE requestID = (?)");
 		 pstmt->setInt(2,request->GetRequestNumber());
 		 pstmt->executeUpdate();
@@ -863,8 +862,6 @@ int VDCPlannerMysqlConnector::removeVDCRequestFromDataBase(Request* request, dou
 		 pstmt = con->prepareStatement("DELETE FROM mapping_virtual_links WHERE requestID = (?)");
 		 pstmt->setInt(2,request->GetRequestNumber());
 		 pstmt->executeUpdate();
-
-		 *
 		 */
 
 		delete pstmt;
@@ -879,11 +876,73 @@ int VDCPlannerMysqlConnector::removeVDCRequestFromDataBase(Request* request, dou
 		delete request;
 		request = NULL;
 	}
-
-	cout << endl;
-
 	return EXIT_SUCCESS;
 }
+
+
+int VDCPlannerMysqlConnector::abortVDCRequestInDataBase(Request* request) {
+
+	try {
+		sql::Driver *driver;
+		sql::Connection *con;
+		sql::PreparedStatement *pstmt;
+
+		/* Create a connection */
+		driver = get_driver_instance();
+
+		string connectTo("tcp://");
+		connectTo.append(this->mysqlServerAddress);
+		connectTo.append(":");
+		stringstream ss1;
+		ss1 << this->mysqlServerPort;
+		connectTo.append(ss1.str());
+		con = driver->connect(connectTo, this->userName, this->password);
+		//con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+
+		con->setSchema(this->dataBaseName);
+
+		//update the Request to set status to STATE_ABORTED
+		pstmt = con->prepareStatement("UPDATE vdc_requests SET status = (?) WHERE requestID = (?)");
+		pstmt->setInt(1,request->GetStatus());
+		pstmt->setInt(2,request->GetRequestNumber());
+		pstmt->executeUpdate();
+
+		// mapping_vdc_request stateMapping is updated
+		pstmt = con->prepareStatement("UPDATE mapping_vdc_requests SET stateMapping = (?) WHERE requestID = (?)");
+		pstmt->setInt(2,request->GetRequestNumber());
+		pstmt->setInt(1,request->GetMapping()->GetStateMapping());
+		pstmt->executeUpdate();
+		// mapping_vdc_request availability is updated
+		pstmt = con->prepareStatement("UPDATE mapping_vdc_requests SET availability = (?) WHERE requestID = (?)");
+		pstmt->setDouble(1,request->GetMapping()->GetAvailability());
+		pstmt->setInt(2,request->GetRequestNumber());
+		pstmt->executeUpdate();
+
+		//delete virtual nodes mapping
+		pstmt = con->prepareStatement("DELETE FROM mapping_virtual_nodes WHERE requestID = (?)");
+		pstmt->setInt(1, request->GetRequestNumber());
+		pstmt->executeUpdate();
+
+		//delete virtual links mapping
+		pstmt = con->prepareStatement("DELETE FROM mapping_virtual_links WHERE requestID = (?)");
+		pstmt->setInt(1, request->GetRequestNumber());
+		pstmt->executeUpdate();
+
+		delete pstmt;
+		delete con;
+
+	} catch (sql::SQLException &e) {
+		cout << "# ERR: SQLException in " << __FILE__;
+		cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+		cout << "# ERR: " << e.what();
+		cout << " (MySQL error code: " << e.getErrorCode();
+		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+		delete request;
+		request = NULL;
+	}
+	return EXIT_SUCCESS;
+}
+
 
 int VDCPlannerMysqlConnector::writeSubstrateNetworkToDataBase(Substrate_network substrate_network) {
 #if 1

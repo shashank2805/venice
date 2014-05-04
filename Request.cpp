@@ -180,7 +180,7 @@ void Request::CalculateStatus() {
 		 {
 		 out << prModule.sendLinkStatus(this->GetNodeById(it3->GetSourceNode_id())->GetPrivateIp(),this->GetNodeById(it3->GetDestinationNode_id())->GetPrivateIp(), it3->GetName());
 		 //UNCOMMENT IN THE CLUSTER--------
-		 cout << out <<endl;
+		 cout << "STATUS for Path is: " << out.str() <<endl;
 		 it3->SetStatus(out.str());
 		 }
 
@@ -267,7 +267,11 @@ Virtual_node* Request::GetNodeById(int id) {
 
 }
 
-void Request::SetMapping(class mapping * mapp) {
+void Request::SetMapping(class mapping *mapp) {
+	this->mapping = mapp;
+}
+
+void Request::SetandDeployMapping(class mapping * mapp) {
 
 	//variables
 	std::list<Priority_group>::iterator it1;

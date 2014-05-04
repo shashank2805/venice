@@ -62,6 +62,7 @@ void * function1(void * pars) {
 	pthread_mutex_lock(&mutex);
 	cout << " State Mapping = " << request->GetStatus();
 	if (request->GetStatus() != STATE_ABORTED) {
+		// TODO: request->SetStatus(STATE_EXPIRED);
 		request->FreeMapping(net);
 	}
 	pthread_mutex_unlock(&mutex);
@@ -184,86 +185,32 @@ int main() {
 				// new user
 				debug("%s: %d\n", "creating new user", user_id);
 				user.SetId(user_id++);
-				user.SetSession("v2gvna14098bvdjtcpo7njh5t2"); // session ID copied from a testrun
+				user.SetSession("v2gvna14098bvdjtcpo7njh5t2"); // session ID copied from a test run
 				users.push_back(user);
 				debug("Current Embedding:\n");
 				subNetwork.DisplaySubstrateEmbedding();
 
-				/*
-				//since it_db_requests is now filled with correct requests , we no longer do mapping
-				//let's select the best mapping option among four possible ones
-				Mapping_trial mapp1(*it_db_requests, 1);
-				mapp1.Mapp(&subNetwork);
-				mapp1.FreeMapp(&subNetwork);
-				Mapping_trial mapp2(*it_db_requests, 2);
-				mapp2.Mapp(&subNetwork);
-				mapp2.FreeMapp(&subNetwork);
-				Mapping_trial mapp3(*it_db_requests, 3);
-				mapp3.Mapp(&subNetwork);
-				mapp3.FreeMapp(&subNetwork);
-				Mapping_trial mapp4(*it_db_requests, 4);
-				mapp4.Mapp(&subNetwork);
-				mapp4.FreeMapp(&subNetwork);
-				if ((mapp1.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp1.GetStateMapping() == STATE_MAP_LINK_FAIL)
-						&& (mapp2.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp2.GetStateMapping() == STATE_MAP_LINK_FAIL)
-						&& (mapp3.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp3.GetStateMapping() == STATE_MAP_LINK_FAIL)
-						&& (mapp4.GetStateMapping() == STATE_MAP_NODE_FAIL || mapp4.GetStateMapping() == STATE_MAP_LINK_FAIL)) {
-					//the mapping was not possible we put let the request wait
-					debug("%s \n", "Mapping from database read request not possible.");
-					user.GetWaitingRequests()->push_back(**it_db_requests);
-					pthread_t t1;
-					struct arg_struct2 args;
-					args.user = &user;
-					args.req = *it_db_requests; //we have to pass the user request otherwise we are jus passing a copy of it
-					pthread_create(&t1, 0, function2, (void *) &args); // create a thread running function1
-					//sprintf(response, "MAP_FAIL&");
-					//send(csock, response, sizeof(response), 0);
-				} else {
-					debug("%s \n", "Mapping from database read request is possible.");
-					mapping mapp = mapping(*it_db_requests);
-					debug("%s \n", "Mapping achieved.");
-					//We try to sellect the best mapping among trials
-					double tempAvai = abs(mapp1.GetAvailability() - (*it_db_requests)->GetAvailability());
-					Mapping_trial * best = &mapp1;
-					debug("%s \n", "mapp1 is the temporarily selected best mapping");
-					if (tempAvai > abs(mapp2.GetAvailability() - (*it_db_requests)->GetAvailability())) {
-						tempAvai = abs(mapp2.GetAvailability() - (*it_db_requests)->GetAvailability());
-						best = &mapp2;
-						debug("%s \n", "mapp2 is the best mapping");
-					}
-					if (tempAvai > abs(mapp3.GetAvailability() - (*it_db_requests)->GetAvailability())) {
-						tempAvai = abs(mapp3.GetAvailability() - (*it_db_requests)->GetAvailability());
-						best = &mapp3;
-						debug("%s \n", "mapp3 is the best mapping");
-					}
-					if (tempAvai > abs(mapp4.GetAvailability() - (*it_db_requests)->GetAvailability())) {
-						tempAvai = abs(mapp4.GetAvailability() - (*it_db_requests)->GetAvailability());
-						best = &mapp4;
-						debug("%s \n", "mapp4 is the best mapping");
-					}
-					debug("%s \n", "Selecting Best Mapping.");
-					best->displayMapp();
-					mapp.ApplyBestMapping(best->GetNodeMapp(), best->GetPathMapp(), best->GetPathLength(), &subNetwork);
-					debug("%s \n", "Assigning Best Mapping.");
-					(*it_db_requests)->SetMapping(&mapp);
-					debug("Resulting Embedding:\n");
-					subNetwork.DisplaySubstrateEmbedding();
-					cout << "The resulting availability of the best mapping is : "
-							<< (*it_db_requests)->GetMapping()->GetAvailability() << " while the required availability is : "
-							<< (*it_db_requests)->GetAvailability() << "\n";
+				/* TODO:
+				 * Since the VDC has been deployed for some time, the duration for its deployment is not same
+				 * as before. The new duration is the original time minus the time it has been deployed already.
+				 * The rudimentary approach is to calculate the time the VDC has been deployed (NOW - ARRIVAL TIME),
+				 * and subtract it from the total intended deployment duration.
+				 * It will NOT give accurate timing, but it is better than not having anything.
 
-					sprintf(response, "MAP_DONE&%f&", (*it_db_requests)->GetMapping()->GetAvailability());
-*/
-					user.GetRequests()->push_back(**it_db_requests);
-					pthread_t t1;
-					struct arg_struct args;
-					args.net = &subNetwork;
-					args.req = user.GetRequestById((*it_db_requests)->GetRequestNumber()); //we have to pass the user request otherwise we are jus passing a copy of it
-					pthread_create(&t1, 0, function1, (void *) &args); // create a thread running function1
-					 // ^^ TODO: since it(^) is to keep track of time of vdc, we need to update the time alive of request, as it was cut off some wherein between.
-					// TODO also need to differentiate between RUNNING and ABORTED vdcs
-					//send(csock, response, sizeof(response), 0);
-//				}
+				 time_t arr_time = (it1)->GetArrTime();
+				 time_t now_time = time(0);
+				 double remaining_time;
+				 remaining_time = (it1)->GetDuration() - difftime(now, (it1)->GetArrTime());
+				 (*it_db_requests)->SetDuration(remaining_time)
+
+				 * */
+
+				user.GetRequests()->push_back(**it_db_requests);
+				pthread_t t1;
+				struct arg_struct args;
+				args.net = &subNetwork;
+				args.req = user.GetRequestById((*it_db_requests)->GetRequestNumber()); //we have to pass the user request otherwise we are jus passing a copy of it
+				pthread_create(&t1, 0, function1, (void *) &args); // create a thread running function1
 				idRequest++;
 			}
 		} else { // Else create a new DB that will be populated when a new request comes in
@@ -322,15 +269,6 @@ int main() {
 							rLoader.Load(&request, WEB, idRequest, buffer);
 							//for testing-----------
 							request.DisplayRequest();
-							// write request to DB
-							/*
-							 debug("%s \n","write new request to DB");
-							 ret_val = vdc_db.writeVDCRequestToDataBase(&request);
-							 if (ret_val == EXIT_SUCCESS)
-							 debug("%s \n", "SUCCESS in writing new request to DB");
-							 else
-							 debug("%s \n", "FAILURE in writing new request to DB");
-							 */
 							debug("Current Embedding:\n");
 							subNetwork.DisplaySubstrateEmbedding();
 							//let's select the best mapping option among four possible ones
@@ -397,7 +335,7 @@ int main() {
 								//for testing-----------cout<<"The resulting availability of the best mapping is : "<<best->GetAvailability()<<" while the required availability is : "<<request.GetAvailability()<<"\n";
 								mapp.ApplyBestMapping(best->GetNodeMapp(), best->GetPathMapp(), best->GetPathLength(), &subNetwork);
 								//for testing-----------cout<<"The availability mapp is : "<<mapp.GetAvailability()<<"\n";
-								request.SetMapping(&mapp);
+								request.SetandDeployMapping(&mapp);
 								//for testing
 								//for testing-----------request.GetMapping()->displayMapp();
 								//for testing-----------request.FreeMapping(&subNetwork);
@@ -519,13 +457,14 @@ int main() {
 										pthread_mutex_unlock(&mutex);
 										sprintf(response, "%s&%d", "RMV_DONE", id);
 
-										// Delete VDC Request from Database
-										debug("remove a request from DB");
-										ret_val = vdc_db.removeVDCRequestFromDataBase(user.GetRequestById(id), double(time(0)));
+										// Abort VDC Request from Database
+										debug("Abort a request in DB.");
+										//ret_val = vdc_db.removeVDCRequestFromDataBase(user.GetRequestById(id), double(time(0)));
+										ret_val = vdc_db.abortVDCRequestInDataBase(user.GetRequestById(id));
 										if (ret_val == EXIT_SUCCESS)
-											debug("%s \n", "SUCCESS in removing request from DB.");
+											debug("%s \n", "SUCCESS in aborting request from DB.");
 										else
-											debug("%s \n", "FAILURE in removing request from DB.");
+											debug("%s \n", "FAILURE in aborting request from DB.");
 
 									} else {
 										sprintf(response, "%s&%d", "RMV_FAILED", id);

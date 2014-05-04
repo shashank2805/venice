@@ -71,7 +71,8 @@ public:
 	double GetAvailability();
 	void SetAvailability(double);
 	class mapping * GetMapping();
-	void SetMapping(class mapping *);
+	void SetMapping(class mapping *mapp);
+	void SetandDeployMapping(class mapping *mapp);
 	void FreeMapping(Substrate_network*);
 	int GetNumberNodes();
 	void SetNumberNodes(int);
